@@ -109,14 +109,14 @@ contains
     dummy1 = trim(STR(dt_mean))
     sz = len(trim(dummy1))
     dummy(20 : 20 + sz - 1) = trim(dummy1)
-    dummy(36 : 36) = '+'
+    dummy(36 : 36) = '-'
 
-    dummy1 = trim(STR(pcent_max))
+    dummy1 = trim(STR(pcent_min))
     sz = len(trim(dummy1))
     dummy(37 : 37 + sz - 1) = trim(dummy1)
 
-    dummy(44 : 44) = '-'
-    dummy1 = trim(STR(pcent_min))
+    dummy(44 : 44) = '+'
+    dummy1 = trim(STR(pcent_max))
     sz = len(trim(dummy1))
     dummy(45 : 45 + sz - 1) = trim(dummy1)
     if (present(fullstep)) then
@@ -152,63 +152,7 @@ contains
       end if
     end if
   end subroutine printTime
-
-  subroutine printNpart(npart_arr, msg, is_first_row)
-    implicit none
-    character(len=*), intent(in)          :: msg
-    character(len=STR_MAX)                :: dummy, dummy1
-    integer, intent(in)                   :: npart_arr(:)
-    integer                               :: npart_mean, npart_max, npart_min
-    integer                               :: pcent_max, pcent_min, sz, sz1, i
-    logical, optional, intent(in)         :: is_first_row
-    npart_mean = SUM(npart_arr) / mpi_size
-    npart_max = MAXVAL(npart_arr)
-    npart_min = MINVAL(npart_arr)
-    if ((npart_max + npart_mean) .ne. 0) then
-      pcent_max = (npart_max - npart_mean) * 200 / (npart_max + npart_mean)
-    else
-      pcent_max = 0
-    end if
-    if ((npart_mean + npart_min) .ne. 0) then
-      pcent_min = (npart_mean - npart_min) * 200 / (npart_mean + npart_min)
-    else
-      pcent_min = 0
-    end if
-
-    do i = 1, 70
-      dummy(i : i) = ' '
-    end do
-
-    sz = len(msg)
-    dummy(1 : sz) = msg
-
-    dummy1 = trim(STR(npart_mean))
-    sz = len(trim(dummy1))
-    dummy(20 : 20 + sz - 1) = trim(dummy1)
-    dummy(36 : 36) = '+'
-
-    dummy1 = trim(STR(pcent_max))
-    sz = len(trim(dummy1))
-    dummy(37 : 37 + sz - 1) = trim(dummy1)
-
-    dummy(44 : 44) = '-'
-    dummy1 = trim(STR(pcent_min))
-    sz = len(trim(dummy1))
-    dummy(45 : 45 + sz - 1) = trim(dummy1)
-
-    print *, dummy(1:70)
-
-    if (present(is_first_row)) then
-      if (.not. is_first_row) then
-        do i = 1, 70
-          dummy1(i : i) = ' '
-        end do
-        dummy1(1:67) = '...................................................................'
-        print *, dummy1(1:70)
-      end if
-    end if
-  end subroutine printNpart
-
+  
   function intToStr(my_int) result(string)
     implicit none
     integer, intent(in)       :: my_int
