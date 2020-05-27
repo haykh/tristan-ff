@@ -18,10 +18,10 @@ contains
     enx(:,:,:) = ex(:,:,:); eny(:,:,:) = ey(:,:,:); enz(:,:,:) = ez(:,:,:)
     bnx(:,:,:) = bx(:,:,:); bny(:,:,:) = by(:,:,:); bnz(:,:,:) = bz(:,:,:)
     ! init dE, dB
-    dex(:,:,:) = -1000.0; dey(:,:,:) = -1000.0; dez(:,:,:) = -1000.0
-    dbx(:,:,:) = -1000.0; dby(:,:,:) = -1000.0; dbz(:,:,:) = -1000.0
+    dex(:,:,:) = QNAN; dey(:,:,:) = QNAN; dez(:,:,:) = QNAN
+    dbx(:,:,:) = QNAN; dby(:,:,:) = QNAN; dbz(:,:,:) = QNAN
     ! init rho
-    rho(:,:,:) = -1000.0
+    rho(:,:,:) = QNAN
   end subroutine initRKstep
 
   subroutine rk3Step(rk_c1, rk_c2, rk_c3)
@@ -38,13 +38,13 @@ contains
     integer :: i1, i2, j1, j2, k1, k2
     integer :: i, j, k
 
-    i1 = -1; i2 = this_meshblock%ptr%sx + 1
-    j1 = -1; j2 = this_meshblock%ptr%sy + 1
-    k1 = -1; k2 = this_meshblock%ptr%sz + 1
+    i1 = 0; i2 = this_meshblock%ptr%sx - 1
+    j1 = 0; j2 = this_meshblock%ptr%sy - 1
+    k1 = 0; k2 = this_meshblock%ptr%sz - 1
 
-    do i = i1, i2
-      do j = j1, j2
-        do k = k1, k2
+    do i = i1 - 1, i2 + 2
+      do j = j1 - 1, j2 + 2
+        do k = k1 - 1, k2 + 2
           rho(i, j, k) = (ex(i, j, k) - ex(i - 1, j, k)) +&
                        & (ey(i, j, k) - ey(i, j - 1, k)) +&
                        & (ez(i, j, k) - ez(i, j, k - 1))
@@ -61,9 +61,9 @@ contains
     real    :: corr
     real    :: intex, intey, intez, intbx, intby, intbz, bmag, emag, intrho
 
-    i1 = -1; i2 = this_meshblock%ptr%sx
-    j1 = -1; j2 = this_meshblock%ptr%sy
-    k1 = -1; k2 = this_meshblock%ptr%sz
+    i1 = 0; i2 = this_meshblock%ptr%sx - 1
+    j1 = 0; j2 = this_meshblock%ptr%sy - 1
+    k1 = 0; k2 = this_meshblock%ptr%sz - 1
 
     do i = i1, i2
       do j = j1, j2
@@ -82,12 +82,6 @@ contains
           !--------X current-------------------------------------
           intrho = 0.5 * (rho(i + 1, j, k) + rho(i, j, k))
 
-          ! call interpFromEdges(0.5, 0.0, 0.0, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.5, 0.0, 0.0, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
           intex = ex(i, j, k)
           intey = 0.25 * (ey(i, j, k) + ey(i + 1, j, k) + ey(i, j - 1, k) + ey(i + 1, j - 1, k))
           intez = 0.25 * (ez(i, j, k) + ez(i + 1, j, k) + ez(i, j, k - 1) + ez(i + 1, j, k - 1))
@@ -111,12 +105,6 @@ contains
           !--------Y current--------------------------------------
           intrho = 0.5 * (rho(i, j + 1, k) + rho(i, j, k))
 
-          ! call interpFromEdges(0.0, 0.5, 0.0, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.0, 0.5, 0.0, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
           intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j + 1, k) + ex(i - 1, j + 1, k))
           intey = ey(i, j, k)
           intez = 0.25 * (ez(i, j, k) + ez(i, j + 1, k) + ez(i, j, k - 1) + ez(i, j + 1, k - 1))
@@ -140,12 +128,6 @@ contains
           !--------Z current--------------------------------------
           intrho = 0.5 * (rho(i, j, k) + rho(i, j, k + 1))
 
-          ! call interpFromEdges(0.0, 0.0, 0.5, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.0, 0.0, 0.5, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
           intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j, k + 1) + ex(i - 1, j, k + 1))
           intey = 0.25 * (ey(i, j, k) + ey(i, j - 1, k) + ey(i, j, k + 1) + ey(i, j - 1, k + 1))
           intez = ez(i, j, k)
@@ -181,9 +163,9 @@ contains
     integer :: i, j, k
     integer :: i1, i2, j1, j2, k1, k2
 
-    i1 = -1; i2 = this_meshblock%ptr%sx
-    j1 = -1; j2 = this_meshblock%ptr%sy
-    k1 = -1; k2 = this_meshblock%ptr%sz
+    i1 = 0; i2 = this_meshblock%ptr%sx - 1
+    j1 = 0; j2 = this_meshblock%ptr%sy - 1
+    k1 = 0; k2 = this_meshblock%ptr%sz - 1
 
     do i = i1, i2
       do j = j1, j2
@@ -192,10 +174,10 @@ contains
           ex(i, j, k) = rk_c1 * enx(i, j, k) + rk_c2 * ex(i, j, k) + rk_c3 * dex(i, j, k)
           ey(i, j, k) = rk_c1 * eny(i, j, k) + rk_c2 * ey(i, j, k) + rk_c3 * dey(i, j, k)
           ez(i, j, k) = rk_c1 * enz(i, j, k) + rk_c2 * ez(i, j, k) + rk_c3 * dez(i, j, k)
-          ! save E-field
-          dex(i, j, k) = ex(i, j, k)
-          dey(i, j, k) = ey(i, j, k)
-          dez(i, j, k) = ez(i, j, k)
+          ! ! save E-field
+          ! dex(i, j, k) = ex(i, j, k)
+          ! dey(i, j, k) = ey(i, j, k)
+          ! dez(i, j, k) = ez(i, j, k)
           ! update B-field
           bx(i, j, k) = rk_c1 * bnx(i, j, k) + rk_c2 * bx(i, j, k) + rk_c3 * dbx(i, j, k)
           by(i, j, k) = rk_c1 * bny(i, j, k) + rk_c2 * by(i, j, k) + rk_c3 * dby(i, j, k)
@@ -229,12 +211,6 @@ contains
           intby = 0.5 * (by(i, j, k) + by(i, j, k - 1))
           intbz = 0.5 * (bz(i, j, k) + bz(i, j - 1, k))
           !---------------------------------------------------
-          ! call interpFromEdges(0.5, 0.0, 0.0, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.5, 0.0, 0.0, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
           bmag = intbx**2 + intby**2 + intbz**2
           epar = (intex * intbx + intey * intby + intez * intbz)
           dex(i, j, k) = ex(i, j, k) - epar * intbx / bmag
@@ -249,12 +225,6 @@ contains
                          & by(i, j, k - 1) + by(i - 1, j, k - 1) + by(i - 1, j + 1, k - 1) + by(i, j + 1, k - 1))
           intbz = 0.5 * (bz(i, j, k) + bz(i - 1, j, k))
           !---------------------------------------------------
-          ! call interpFromEdges(0.0, 0.5, 0.0, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.0, 0.5, 0.0, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
           bmag = intbx**2 + intby**2 + intbz**2
           epar = (intex * intbx + intey * intby + intez * intbz)
           dey(i, j, k) = ey(i, j, k) - epar * intby / bmag
@@ -269,111 +239,89 @@ contains
           intbz = 0.125 * (bz(i, j, k) + bz(i - 1, j, k) + bz(i - 1, j - 1, k) + bz(i, j - 1, k) +&
                          & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1) )
           !---------------------------------------------------
-          ! call interpFromEdges(0.0, 0.0, 0.5, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.0, 0.0, 0.5, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
           bmag = intbx**2 + intby**2 + intbz**2
           epar = (intex * intbx + intey * intby + intez * intbz)
           dez(i, j, k) = ez(i, j, k) - epar * intbz / bmag
         end do
       end do
     end do
-    ex(:,:,:) = dex(:,:,:); ey(:,:,:) = dey(:,:,:); ez(:,:,:) = dez(:,:,:)
+    ex(i1:i2, j1:j2, k1:k2) = dex(i1:i2, j1:j2, k1:k2)
+    ey(i1:i2, j1:j2, k1:k2) = dey(i1:i2, j1:j2, k1:k2)
+    ez(i1:i2, j1:j2, k1:k2) = dez(i1:i2, j1:j2, k1:k2)
   end subroutine cleanEpar
 
-  subroutine checkEB()
-    implicit none
-    integer :: i, j, k
-    real    :: intex, intey, intez, intbx, intby, intbz, bmag, emag, corr
-    integer :: i1, i2, j1, j2, k1, k2
-
-    i1 = -1; i2 = this_meshblock%ptr%sx + 1
-    j1 = -1; j2 = this_meshblock%ptr%sy + 1
-    k1 = -1; k2 = this_meshblock%ptr%sz + 1
-
-    do i = i1, i2
-      do j = j1, j2
-        do k = k1, k2
-          !-------interpolate on Ex---------------------------
-          intex = ex(i, j, k)
-          intey = 0.25 * (ey(i, j, k) + ey(i + 1, j, k) + ey(i, j - 1, k) + ey(i + 1, j - 1, k))
-          intez = 0.25 * (ez(i, j, k) + ez(i + 1, j, k) + ez(i, j, k - 1) + ez(i + 1, j, k - 1))
-
-          intbx = 0.125 * (bx(i, j, k) + bx(i, j - 1, k) + bx(i + 1, j - 1, k) + bx(i + 1, j, k) +&
-                         & bx(i, j, k - 1) + bx(i, j - 1, k - 1) + bx(i + 1, j - 1, k - 1) + bx(i + 1, j, k - 1))
-          intby = 0.5 * (by(i, j, k) + by(i, j, k - 1))
-          intbz = 0.5 * (bz(i, j, k) + bz(i, j - 1, k))
-          ! call interpFromEdges(0.5, 0.0, 0.0, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.5, 0.0, 0.0, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
-
-          bmag = intbx**2 + intby**2 + intbz**2
-          emag = intex**2 + intey**2 + intez**2
-          if (emag .gt. bmag) then
-            corr = sqrt(bmag / emag)
-            intey = intey * corr
-            intez = intez * corr
-          endif
-          ex(i, j, k) = ex(i, j, k) * corr
-          !---------------------------------------------------
-
-          !-------interpolate on Ey---------------------------
-          ! call interpFromEdges(0.0, 0.5, 0.0, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.0, 0.5, 0.0, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
-          intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j + 1, k) + ex(i - 1, j + 1, k))
-          intey = ey(i, j, k)
-          intez = 0.25 * (ez(i, j, k) + ez(i, j + 1, k) + ez(i, j, k - 1) + ez(i, j + 1, k - 1))
-
-          intbx = 0.5 * (bx(i, j, k) + bx(i, j, k - 1))
-          intby = 0.125 * (by(i, j, k) + by(i - 1, j, k) + by(i - 1, j + 1, k) + by(i, j + 1, k) +&
-                         & by(i, j, k - 1) + by(i - 1, j, k - 1) + by(i - 1, j + 1, k - 1) + by(i, j + 1, k - 1))
-          intbz = 0.5 * (bz(i, j, k) + bz(i - 1, j, k))
-
-          bmag = intbx**2 + intby**2 + intbz**2
-          emag = intex**2 + intey**2 + intez**2
-          if (emag .gt. bmag) then
-            corr = sqrt(bmag / emag)
-          endif
-          ey(i, j, k) = ey(i, j, k) * corr
-          !---------------------------------------------------
-
-          !-------interpolate on Ez---------------------------
-          intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j, k + 1) + ex(i - 1, j, k + 1))
-          intey = 0.25 * (ey(i, j, k) + ey(i, j - 1, k) + ey(i, j, k + 1) + ey(i, j - 1, k + 1))
-          intez = ez(i, j, k)
-
-          intbx = 0.5 * (bx(i, j, k) + bx(i, j - 1, k))
-          intby = 0.5 * (by(i, j, k) + by(i - 1, j, k))
-          intbz = 0.125 * (bz(i, j, k) + bz(i - 1, j, k) + bz(i - 1, j - 1, k) + bz(i, j - 1, k) +&
-                         & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1))
-          ! call interpFromEdges(0.0, 0.0, 0.5, i, j, k, &
-          !                    & ex, ey, ez, &
-          !                    & intex, intey, intez)
-          ! call interpFromFaces(0.0, 0.0, 0.5, i, j, k, &
-          !                    & bx, by, bz, &
-          !                    & intbx, intby, intbz)
-
-          bmag = intbx**2 + intby**2 + intbz**2
-          emag = intex**2 + intey**2 + intez**2
-          if (emag .gt. bmag) then
-            corr = sqrt(bmag / emag)
-          endif
-          ez(i, j, k) = ez(i, j, k) * corr
-          !---------------------------------------------------
-        end do
-      end do
-    end do
-
-  end subroutine checkEB
+  ! subroutine checkEB()
+  !   implicit none
+  !   integer :: i, j, k
+  !   real    :: intex, intey, intez, intbx, intby, intbz, bmag, emag, corr
+  !   integer :: i1, i2, j1, j2, k1, k2
+  !
+  !   i1 = -1; i2 = this_meshblock%ptr%sx + 1
+  !   j1 = -1; j2 = this_meshblock%ptr%sy + 1
+  !   k1 = -1; k2 = this_meshblock%ptr%sz + 1
+  !
+  !   do i = i1, i2
+  !     do j = j1, j2
+  !       do k = k1, k2
+  !         !-------interpolate on Ex---------------------------
+  !         intex = ex(i, j, k)
+  !         intey = 0.25 * (ey(i, j, k) + ey(i + 1, j, k) + ey(i, j - 1, k) + ey(i + 1, j - 1, k))
+  !         intez = 0.25 * (ez(i, j, k) + ez(i + 1, j, k) + ez(i, j, k - 1) + ez(i + 1, j, k - 1))
+  !
+  !         intbx = 0.125 * (bx(i, j, k) + bx(i, j - 1, k) + bx(i + 1, j - 1, k) + bx(i + 1, j, k) +&
+  !                        & bx(i, j, k - 1) + bx(i, j - 1, k - 1) + bx(i + 1, j - 1, k - 1) + bx(i + 1, j, k - 1))
+  !         intby = 0.5 * (by(i, j, k) + by(i, j, k - 1))
+  !         intbz = 0.5 * (bz(i, j, k) + bz(i, j - 1, k))
+  !
+  !         bmag = intbx**2 + intby**2 + intbz**2
+  !         emag = intex**2 + intey**2 + intez**2
+  !         if (emag .gt. bmag) then
+  !           corr = sqrt(bmag / emag)
+  !           intey = intey * corr
+  !           intez = intez * corr
+  !         endif
+  !         ex(i, j, k) = ex(i, j, k) * corr
+  !         !---------------------------------------------------
+  !
+  !         !-------interpolate on Ey---------------------------
+  !         intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j + 1, k) + ex(i - 1, j + 1, k))
+  !         intey = ey(i, j, k)
+  !         intez = 0.25 * (ez(i, j, k) + ez(i, j + 1, k) + ez(i, j, k - 1) + ez(i, j + 1, k - 1))
+  !
+  !         intbx = 0.5 * (bx(i, j, k) + bx(i, j, k - 1))
+  !         intby = 0.125 * (by(i, j, k) + by(i - 1, j, k) + by(i - 1, j + 1, k) + by(i, j + 1, k) +&
+  !                        & by(i, j, k - 1) + by(i - 1, j, k - 1) + by(i - 1, j + 1, k - 1) + by(i, j + 1, k - 1))
+  !         intbz = 0.5 * (bz(i, j, k) + bz(i - 1, j, k))
+  !
+  !         bmag = intbx**2 + intby**2 + intbz**2
+  !         emag = intex**2 + intey**2 + intez**2
+  !         if (emag .gt. bmag) then
+  !           corr = sqrt(bmag / emag)
+  !         endif
+  !         ey(i, j, k) = ey(i, j, k) * corr
+  !         !---------------------------------------------------
+  !
+  !         !-------interpolate on Ez---------------------------
+  !         intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j, k + 1) + ex(i - 1, j, k + 1))
+  !         intey = 0.25 * (ey(i, j, k) + ey(i, j - 1, k) + ey(i, j, k + 1) + ey(i, j - 1, k + 1))
+  !         intez = ez(i, j, k)
+  !
+  !         intbx = 0.5 * (bx(i, j, k) + bx(i, j - 1, k))
+  !         intby = 0.5 * (by(i, j, k) + by(i - 1, j, k))
+  !         intbz = 0.125 * (bz(i, j, k) + bz(i - 1, j, k) + bz(i - 1, j - 1, k) + bz(i, j - 1, k) +&
+  !                        & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1))
+  !
+  !         bmag = intbx**2 + intby**2 + intbz**2
+  !         emag = intex**2 + intey**2 + intez**2
+  !         if (emag .gt. bmag) then
+  !           corr = sqrt(bmag / emag)
+  !         endif
+  !         ez(i, j, k) = ez(i, j, k) * corr
+  !         !---------------------------------------------------
+  !       end do
+  !     end do
+  !   end do
+  !
+  ! end subroutine checkEB
 
   end module m_fldsolver

@@ -28,4 +28,8 @@
   interval      = 10             # interval between output steps
   istep         = 4              # field downsampling
 
+<algorithm>
+
+  c             = 0.45           # speed of light (dx/dt)
+
 <problem>

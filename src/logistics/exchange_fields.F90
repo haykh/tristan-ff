@@ -49,7 +49,7 @@ contains
           cntr = cntr + 1
 
           mpi_sendto = this_meshblock%ptr%neighbor(ind1,ind2,ind3)%ptr%rnk
-          mpi_sendtag = 100 * (mpi_rank + 1) + (ind3 + 2) + 3 * (ind2 + 1) + 9 * (ind1 + 1)
+          mpi_sendtag = (ind3 + 2) + 3 * (ind2 + 1) + 9 * (ind1 + 1)
 
           ! highlight the region to send and save to `send_fld`
           if (ind1 .eq. 0) then
@@ -75,7 +75,7 @@ contains
           end if
 
           ! write send/recv arrays in/from a given direction
-          !     in 3D: 26 directions, in 2D: 8, in 1D: 2
+          !     in 3D: 26 directions
           mpi_offset = (cntr - 1) * sendrecv_offsetsz
           send_cnt = 1
           do i = imin, imax
@@ -128,7 +128,7 @@ contains
             end if
 
             mpi_recvfrom = this_meshblock%ptr%neighbor(ind1,ind2,ind3)%ptr%rnk
-            mpi_recvtag = 100 * (mpi_recvfrom + 1) + (-ind3 + 2) + 3 * (-ind2 + 1) + 9 * (-ind1 + 1)
+            mpi_recvtag = (-ind3 + 2) + 3 * (-ind2 + 1) + 9 * (-ind1 + 1)
 
             if (.not. mpi_recvflags(cntr)) then
               quit_loop = .false.

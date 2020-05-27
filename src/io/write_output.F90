@@ -37,6 +37,8 @@ contains
 
     step = output_index
     #ifdef HDF5
+      call writeParams_hdf5(step, time)
+        call printDiag((mpi_rank .eq. 0), "...writeParams_hdf5()", .true.)
       call writeFields_hdf5(step, time)
         call printDiag((mpi_rank .eq. 0), "...writeFields_hdf5()", .true.)
       call writeDomain_hdf5(step, time)
@@ -62,6 +64,63 @@ contains
   end subroutine initializeOutput
 
   #ifdef HDF5
+
+  subroutine writeParams_hdf5(step, time)
+    implicit none
+    integer, intent(in)               :: step, time
+    character(len=STR_MAX)            :: stepchar, filename
+    integer                           :: n, error, datarank
+    integer(HID_T)                    :: file_id, dspace_id, dset_id
+    integer(HSIZE_T), dimension(1)    :: data_dims
+    integer, allocatable              :: data_int(:)
+    real, allocatable                 :: data_real(:)
+    character(len=STR_MAX)            :: dsetname
+
+    if (mpi_rank .eq. 0) then
+      datarank = 1
+      data_dims(1) = 1
+      allocate(data_real(1))
+      allocate(data_int(1))
+
+      write(stepchar, "(i5.5)") step
+      filename = trim(output_dir_name) // '/params.' // trim(stepchar)
+
+      dsetname = 'timestep'
+      call h5open_f(error)
+      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
+      call h5screate_simple_f(datarank, data_dims, dspace_id, error)
+      call h5dcreate_f(file_id, trim(dsetname), H5T_NATIVE_INTEGER, dspace_id, dset_id, error)
+      data_int(1) = time
+      call h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, data_int, data_dims, error)
+      call h5dclose_f(dset_id, error)
+      call h5sclose_f(dspace_id, error)
+
+      do n = 1, sim_params%count
+        dsetname = trim(sim_params%param_group(n)%str) // ':' // trim(sim_params%param_name(n)%str)
+        call h5screate_simple_f(datarank, data_dims, dspace_id, error)
+        if (sim_params%param_type(n) .eq. 1) then
+          call h5dcreate_f(file_id, trim(dsetname), H5T_NATIVE_INTEGER, dspace_id, dset_id, error)
+          data_int(1) = sim_params%param_value(n)%value_int
+          call h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, data_int, data_dims, error)
+        else if (sim_params%param_type(n) .eq. 2) then
+          call h5dcreate_f(file_id, trim(dsetname), H5T_NATIVE_REAL, dspace_id, dset_id, error)
+          data_real(1) = sim_params%param_value(n)%value_real
+          call h5dwrite_f(dset_id, H5T_NATIVE_REAL, data_real, data_dims, error)
+        else if (sim_params%param_type(n) .eq. 3) then
+          call h5dcreate_f(file_id, trim(dsetname), H5T_NATIVE_INTEGER, dspace_id, dset_id, error)
+          data_int(1) = sim_params%param_value(n)%value_bool
+          call h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, data_int, data_dims, error)
+        else
+          call throwError('ERROR. Unknown `param_type` in `saveAllParameters`.')
+        end if
+        call h5dclose_f(dset_id, error)
+        call h5sclose_f(dspace_id, error)
+      end do
+      call h5fclose_f(file_id, error)
+      call h5close_f(error)
+    end if
+  end subroutine writeParams_hdf5
+
   subroutine writeXDMF_hdf5(step, time, ni, nj, nk)
     implicit none
     integer, intent(in)               :: step, time, ni, nj, nk
@@ -162,6 +221,7 @@ contains
     filename = trim(output_dir_name) // '/flds.tot.' // trim(stepchar)
 
     ! assuming `global_mesh%{x0,y0,z0} .eq. 0`
+    ! if debug enabled write also the outermost ghost zones
     if (output_istep .eq. 1) then
       #ifndef DEBUG
         offset_i = this_x0;   offset_j = this_y0;   offset_k = this_z0
@@ -262,14 +322,6 @@ contains
     global_dims(2) = glob_n_j
     global_dims(3) = glob_n_k
 
-    ! mpi_f08 thing
-    ! call MPI_INFO_CREATE(FILE_INFO_TEMPLATE, error)
-    ! call MPI_INFO_SET(FILE_INFO_TEMPLATE, "access_style", "write_once", error)
-    ! call MPI_INFO_SET(FILE_INFO_TEMPLATE, "collective_buffering", "true", error)
-    ! call MPI_INFO_SET(FILE_INFO_TEMPLATE, "cb_block_size", "4194304", error)
-    ! call MPI_INFO_SET(FILE_INFO_TEMPLATE, "cb_buffer_size", "16777216", error)
-    ! call MPI_INFO_SET(FILE_INFO_TEMPLATE, "cb_nodes", "1", error)
-
     call h5open_f(error)
     call h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
     call h5pset_fapl_mpio_f(plist_id, h5comm, h5info, error)
@@ -367,7 +419,7 @@ contains
       end do
 
       ! Write the dataset collectively
-      call h5dwrite_real_1(dset_id(f), H5T_NATIVE_REAL, sm_arr(:,:,:), global_dims, error, &
+      call h5dwrite_f(dset_id(f), H5T_NATIVE_REAL, sm_arr(:,:,:), global_dims, error, &
                     & file_space_id = filespace(f), mem_space_id = memspace, xfer_prp = plist_id)
     end do
 

@@ -4,4 +4,5 @@
 #define TINY      1e-7
 
 #define M_PI      3.141592653589793
-#define CC        0.45
+
+#define QNAN      (TRANSFER((/ Z'00000000', Z'7FF80000' /), 1.0_4))

@@ -1,4 +1,4 @@
-# Template for TRISTAN-MP Makefile
+# Template for TRISTAN-ff Makefile
 # Kindly borrowed from ATHENA++
 SHELL=/bin/sh
 
@@ -29,8 +29,8 @@ SRC_FILES := $(SRC_DIR)global_namespace.F90 \
              $(SRC_DIR)logistics/exchange_fields.F90 \
              $(SRC_DIR)io/read_input.F90 \
              $(addprefix $(USR_DIR), $(USER_FILE).F90) \
-						 $(SRC_DIR)io/write_output.F90 \
              $(SRC_DIR)algorithms/field_solver.F90 \
+						 $(SRC_DIR)io/write_output.F90 \
              $(SRC_DIR)logistics/initialize.F90 \
              $(SRC_DIR)tristanmainloop.F90 \
              $(SRC_DIR)tristan.F90

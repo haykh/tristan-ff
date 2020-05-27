@@ -4,8 +4,6 @@ module m_aux
   use m_globalnamespace
   implicit none
   real(dprec)                  :: dseed
-  ! integer, dimension(0:15)        :: state
-  ! integer                         :: rand_ind
 
   abstract interface
     function spatialDistribution(x_glob, y_glob, z_glob,&
@@ -20,6 +18,26 @@ module m_aux
     module procedure intToStr
     module procedure realToStr
   end interface STR
+
+  type :: generic_var
+    integer :: value_int
+    real    :: value_real
+    logical :: value_bool
+  end type generic_var
+
+  type generic_string
+    character(len=STR_MAX), allocatable :: str
+  end type generic_string
+
+  type :: simulation_params
+    integer                           :: count
+    integer, allocatable              :: param_type(:) ! 1 = int, 2 = float, 3 = bool
+    type(generic_string), allocatable :: param_group(:)
+    type(generic_string), allocatable :: param_name(:)
+    type(generic_var), allocatable    :: param_value(:)
+  end type simulation_params
+
+  type(simulation_params) :: sim_params
 
   !--- PRIVATE functions -----------------------------------------!
   private :: intToStr, realToStr
@@ -53,6 +71,29 @@ contains
     #endif
   end subroutine printDiag
 
+  function getFMTForReal(value, w) result(FMT)
+    implicit none
+    real, intent(in)              :: value
+    character(len=STR_MAX)        :: FMT
+    integer, intent(in), optional :: w
+    integer                       :: w_
+    character(len=10)             :: dummy
+    if (.not. present(w)) then
+      w_ = 10
+    else
+      w_ = w
+    end if
+    write(dummy, '(I10)') w_
+
+    if ((abs(value) .ge. 100000) .or.&
+      & ((abs(value) .lt. 1e-4) .and.&
+        & (abs(value) .ne. 0.0))) then
+      FMT = 'ES' // trim(dummy) // '.2'
+    else
+      FMT = 'F' // trim(dummy) // '.2'
+    end if
+  end function getFMTForReal
+
   subroutine printReport(bool, msg, prepend)
     implicit none
     character(len=*), intent(in)  :: msg
@@ -79,80 +120,100 @@ contains
     end if
   end subroutine printReport
 
-  subroutine printTime(dt_arr, msg, fullstep, is_first_row)
+  subroutine printTimeHeader(tstep)
+    implicit none
+    integer, intent(in)    :: tstep
+    character(len=STR_MAX) :: dummy
+    integer                :: sz, i
+
+    ! printing divider
+    do i = 72, 72
+      dummy(i : i) = ' '
+    end do
+    do i = 1, 71
+      dummy(i : i) = '-'
+    end do
+    print *, dummy(1:72)
+
+    ! printing timestep
+    sz = len(trim("Timestep: " // STR(tstep)))
+    do i = 1, 71
+      dummy(i : i) = '.'
+    end do
+    dummy(1 : sz) = trim("Timestep: " // STR(tstep))
+    dummy(66:71) = '[DONE]'
+    print *, dummy(1:72)
+
+    ! printing header
+    do i = 1, 72
+      dummy(i : i) = ' '
+    end do
+    dummy(1:71) = '[ROUTINE]          [TIME, ms]      [MIN  /  MAX, ms]      [FRACTION, %]'
+    print *, dummy(1:72)
+  end subroutine printTimeHeader
+
+  subroutine printTimeFooter()
+    implicit none
+    character(len=STR_MAX) :: dummy
+    integer                :: i
+
+    do i = 72, 72
+      dummy(i : i) = ' '
+    end do
+    do i = 1, 71
+      dummy(i : i) = '.'
+    end do
+    print *, dummy(1:72)
+  end subroutine printTimeFooter
+
+  subroutine printTime(dt_arr, msg, fullstep)
     implicit none
     character(len=*), intent(in)          :: msg
-    character(len=STR_MAX)                :: dummy, dummy1
+    character(len=STR_MAX)                :: dummy, dummy1, FMT
     real(kind=8), intent(in)              :: dt_arr(:)
     real, optional, intent(in)            :: fullstep
     real                                  :: dt_mean, dt_max, dt_min
-    integer                               :: pcent_max, pcent_min, sz, sz1, i
-    logical, optional, intent(in)         :: is_first_row
+    integer                               :: sz, sz1, i
     dt_mean = SUM(dt_arr) * 1000 / mpi_size
     dt_max = MAXVAL(dt_arr) * 1000
     dt_min = MINVAL(dt_arr) * 1000
-    pcent_max = (dt_max - dt_mean) * 200 / (dt_max + dt_mean)
-    pcent_min = (dt_mean - dt_min) * 200 / (dt_mean + dt_min)
     if (present(fullstep)) then
       if (dt_mean / fullstep .lt. 1e-4) then
-        dt_mean = 0; pcent_max = 0; pcent_min = 0
+        dt_mean = 0; dt_min = 0; dt_max = 0
       end if
     end if
 
-    do i = 1, 70
+    do i = 1, 72
       dummy(i : i) = ' '
     end do
 
     sz = len(msg)
     dummy(1 : sz) = msg
 
-    dummy1 = trim(STR(dt_mean))
-    sz = len(trim(dummy1))
+    FMT = "("//trim(getFMTForReal(dt_mean))//")"
+    write(dummy1, FMT) dt_mean
+    sz = len_trim(dummy1)
     dummy(20 : 20 + sz - 1) = trim(dummy1)
-    dummy(36 : 36) = '-'
 
-    dummy1 = trim(STR(pcent_min))
-    sz = len(trim(dummy1))
-    dummy(37 : 37 + sz - 1) = trim(dummy1)
+    FMT = "("//trim(getFMTForReal(dt_min))//")"
+    write(dummy1, FMT) dt_min
+    sz = len_trim(dummy1)
+    dummy(32 : 32 + sz - 1) = trim(dummy1)
 
-    dummy(44 : 44) = '+'
-    dummy1 = trim(STR(pcent_max))
-    sz = len(trim(dummy1))
-    dummy(45 : 45 + sz - 1) = trim(dummy1)
+    FMT = "("//trim(getFMTForReal(dt_max))//")"
+    write(dummy1, FMT) dt_max
+    sz = len_trim(dummy1)
+    dummy(43 : 43 + sz - 1) = trim(dummy1)
     if (present(fullstep)) then
-      dummy1 = trim(STR(dt_mean * 100 / fullstep))
-      sz1 = len(trim(dummy1))
-      dummy(55 : 55 + sz1 - 1) = trim(dummy1)
+      FMT = "("//trim(getFMTForReal(dt_mean * 100 / fullstep))//")"
+      write(dummy1, FMT) dt_mean * 100 / fullstep
+      sz1 = len_trim(dummy1)
+      dummy(62 : 62 + sz1 - 1) = trim(dummy1)
     end if
 
-    if (present(is_first_row)) then
-      if (is_first_row) then
-        do i = 1, 70
-          dummy1(i : i) = ' '
-        end do
-        dummy1(1:67) = '-------------------------------------------------------------------'
-        print *, dummy1(1:70)
-        do i = 1, 70
-          dummy1(i : i) = ' '
-        end do
-        dummy1(1:67) = '[ROUTINE]          [TIME, ms]      [MIN/MAX, %]       [FRACTION, %]'
-        print *, dummy1(1:70)
-      end if
-    end if
-
-    print *, dummy(1:70)
-
-    if (present(is_first_row)) then
-      if (.not. is_first_row) then
-        do i = 1, 70
-          dummy1(i : i) = ' '
-        end do
-        dummy1(1:67) = '...................................................................'
-        print *, dummy1(1:70)
-      end if
-    end if
+    print *, dummy(1:72)
   end subroutine printTime
-  
+
   function intToStr(my_int) result(string)
     implicit none
     integer, intent(in)       :: my_int
@@ -167,7 +228,11 @@ contains
     real, intent(in)          :: my_real
     character(:), allocatable :: string
     character(len=STR_MAX)    :: temp
-    write(temp, '(G0.2)') my_real
+    if ((my_real .ge. 1000) .or. ((my_real .lt. 1e-2) .and. (my_real .ne. 0.0))) then
+      write(temp, '(ES10.2)') my_real
+    else
+      write(temp, '(F10.2)') my_real
+    end if
     string = trim(temp)
   end function realToStr
 
@@ -178,14 +243,7 @@ contains
     read (my_str, *) my_int
   end function STRtoINT
 
-  !--- Taken from Zeltron -------------------------------------------------!
-  ! Reference: http://gcc.gnu.org/onlinedocs/gfortran/RANDOM_005fSEED.html
-  !........................................................................!
-
   real(dprec) function randomNum(DSEED)
-    ! implicit none
-    ! integer, intent(in) :: dseed
-    ! call random_number(random)
   	implicit none
   	real(dprec)    :: DSEED
   	integer        :: I
@@ -210,6 +268,14 @@ contains
     return
   end function random
 
+  integer function randomInt(DSEED, amin, amax)
+    implicit none
+    real(dprec)         :: DSEED
+    integer, intent(in) :: amin, amax
+    randomInt = amin + INT((amax - amin) * random(dseed))
+    return
+  end function randomInt
+
   real function poisson(num)
     implicit none
     real, intent(in) :: num
@@ -232,17 +298,5 @@ contains
     integer, intent(in) :: rank
     dseed = 123457.D0
     dseed = dseed + rank
-    ! integer :: i, n, clock
-    ! integer, dimension(:), allocatable :: seed
-    !
-    ! call random_seed(size = n)
-    ! allocate(seed(n))
-    !
-    ! call system_clock(COUNT = clock)
-    !
-    ! seed = clock + rank * (/ (i - 1, i = 1, n) /)
-    ! call random_seed(PUT = seed)
-    ! deallocate(seed)
   end subroutine initializeRandomSeed
-
 end module m_aux
