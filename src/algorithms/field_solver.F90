@@ -9,7 +9,7 @@ module m_fldsolver
   implicit none
 
   !--- PRIVATE functions -----------------------------------------!
-
+  private :: lambdaAbsorb
   !...............................................................!
 contains
   subroutine initRKstep()
@@ -68,10 +68,12 @@ contains
     do i = i1, i2
       do j = j1, j2
         do k = k1, k2
+          ! dB / dt
           dbx(i, j, k) = CC * ((ey(i, j, k + 1) - ey(i, j, k)) - (ez(i, j + 1, k) - ez(i, j, k)));
           dby(i, j, k) = CC * ((ez(i + 1, j, k) - ez(i, j, k)) - (ex(i, j, k + 1) - ex(i, j, k)));
           dbz(i, j, k) = CC * ((ex(i, j + 1, k) - ex(i, j, k)) - (ey(i + 1, j, k) - ey(i, j, k)));
 
+          ! dE / dt
           dex(i, j, k) = -CC * (((by(i, j, k) - by(i, j, k - 1)) - (bz(i, j, k) - bz(i, j - 1, k))) -&
                               & ((b0y(i, j, k) - b0y(i, j, k - 1)) - (b0z(i, j, k) - b0z(i, j - 1, k))));
           dey(i, j, k) = -CC * (((bz(i, j, k) - bz(i - 1, j, k)) - (bx(i, j, k) - bx(i, j, k - 1))) -&
@@ -159,29 +161,75 @@ contains
 
   subroutine rk3Update(rk_c1, rk_c2, rk_c3)
     implicit none
-    real, intent(in) :: rk_c1, rk_c2, rk_c3
-    integer :: i, j, k
-    integer :: i1, i2, j1, j2, k1, k2
+    real, intent(in)  :: rk_c1, rk_c2, rk_c3
+    integer           :: i, j, k
+    integer           :: i1, i2, j1, j2, k1, k2
+    real              :: lam, lam1, lam2, xg, yg, zg
+
+    ! ! save E-field
+    ! dex(i, j, k) = ex(i, j, k)
+    ! dey(i, j, k) = ey(i, j, k)
+    ! dez(i, j, k) = ez(i, j, k)
 
     i1 = 0; i2 = this_meshblock%ptr%sx - 1
     j1 = 0; j2 = this_meshblock%ptr%sy - 1
     k1 = 0; k2 = this_meshblock%ptr%sz - 1
 
     do i = i1, i2
+      xg = REAL(i + this_meshblock%ptr%x0)
       do j = j1, j2
+        yg = REAL(j + this_meshblock%ptr%y0)
         do k = k1, k2
-          ! update E-field
-          ex(i, j, k) = rk_c1 * enx(i, j, k) + rk_c2 * ex(i, j, k) + rk_c3 * dex(i, j, k)
-          ey(i, j, k) = rk_c1 * eny(i, j, k) + rk_c2 * ey(i, j, k) + rk_c3 * dey(i, j, k)
-          ez(i, j, k) = rk_c1 * enz(i, j, k) + rk_c2 * ez(i, j, k) + rk_c3 * dez(i, j, k)
-          ! ! save E-field
-          ! dex(i, j, k) = ex(i, j, k)
-          ! dey(i, j, k) = ey(i, j, k)
-          ! dez(i, j, k) = ez(i, j, k)
-          ! update B-field
-          bx(i, j, k) = rk_c1 * bnx(i, j, k) + rk_c2 * bx(i, j, k) + rk_c3 * dbx(i, j, k)
-          by(i, j, k) = rk_c1 * bny(i, j, k) + rk_c2 * by(i, j, k) + rk_c3 * dby(i, j, k)
-          bz(i, j, k) = rk_c1 * bnz(i, j, k) + rk_c2 * bz(i, j, k) + rk_c3 * dbz(i, j, k)
+          zg = REAL(k + this_meshblock%ptr%z0)
+          #ifndef ABSORB
+            ! update E-field
+            ex(i, j, k) = rk_c1 * enx(i, j, k) + rk_c2 * ex(i, j, k) + rk_c3 * dex(i, j, k)
+            ey(i, j, k) = rk_c1 * eny(i, j, k) + rk_c2 * ey(i, j, k) + rk_c3 * dey(i, j, k)
+            ez(i, j, k) = rk_c1 * enz(i, j, k) + rk_c2 * ez(i, j, k) + rk_c3 * dez(i, j, k)
+
+            ! update B-field
+            bx(i, j, k) = rk_c1 * bnx(i, j, k) + rk_c2 * bx(i, j, k) + rk_c3 * dbx(i, j, k)
+            by(i, j, k) = rk_c1 * bny(i, j, k) + rk_c2 * by(i, j, k) + rk_c3 * dby(i, j, k)
+            bz(i, j, k) = rk_c1 * bnz(i, j, k) + rk_c2 * bz(i, j, k) + rk_c3 * dbz(i, j, k)
+          #else
+            ! update E-field
+            lam = lambdaAbsorb(xg + 0.5, yg, zg)
+            lam1 = (1.0 + lam) / (1.0 - lam)
+            lam2 = 1.0 / (1.0 - lam)
+            ex(i, j, k) = lam1 * (rk_c1 * enx(i, j, k) + rk_c2 * ex(i, j, k)) + lam2 * (rk_c3 * dex(i, j, k))
+
+            lam = lambdaAbsorb(xg, yg + 0.5, zg)
+            lam1 = (1.0 + lam) / (1.0 - lam)
+            lam2 = 1.0 / (1.0 - lam)
+            ey(i, j, k) = lam1 * (rk_c1 * eny(i, j, k) + rk_c2 * ey(i, j, k)) + lam2 * (rk_c3 * dey(i, j, k))
+
+            lam = lambdaAbsorb(xg, yg, zg + 0.5)
+            lam1 = (1.0 + lam) / (1.0 - lam)
+            lam2 = 1.0 / (1.0 - lam)
+            ez(i, j, k) = lam1 * (rk_c1 * enz(i, j, k) + rk_c2 * ez(i, j, k)) + lam2 * (rk_c3 * dez(i, j, k))
+
+            ! update B-field
+            lam = lambdaAbsorb(xg, yg + 0.5, zg + 0.5)
+            lam1 = (1.0 + lam) / (1.0 - lam)
+            lam2 = 1.0 / (1.0 - lam)
+            bx(i, j, k) = (1.0 - lam1) * b0x(i, j, k) +&
+                            & lam1 * (rk_c1 * bnx(i, j, k) + rk_c2 * bx(i, j, k)) +&
+                            & lam2 * (rk_c3 * dbx(i, j, k))
+
+            lam = lambdaAbsorb(xg + 0.5, yg, zg + 0.5)
+            lam1 = (1.0 + lam) / (1.0 - lam)
+            lam2 = 1.0 / (1.0 - lam)
+            by(i, j, k) = (1.0 - lam1) * b0y(i, j, k) +&
+                            & lam1 * (rk_c1 * bny(i, j, k) + rk_c2 * by(i, j, k)) +&
+                            & lam2 * (rk_c3 * dby(i, j, k))
+
+            lam = lambdaAbsorb(xg + 0.5, yg + 0.5, zg)
+            lam1 = (1.0 + lam) / (1.0 - lam)
+            lam2 = 1.0 / (1.0 - lam)
+            bz(i, j, k) = (1.0 - lam1) * b0z(i, j, k) +&
+                            & lam1 * (rk_c1 * bnz(i, j, k) + rk_c2 * bz(i, j, k)) +&
+                            & lam2 * (rk_c3 * dbz(i, j, k))
+          #endif
         end do
       end do
     end do
@@ -249,6 +297,40 @@ contains
     ey(i1:i2, j1:j2, k1:k2) = dey(i1:i2, j1:j2, k1:k2)
     ez(i1:i2, j1:j2, k1:k2) = dez(i1:i2, j1:j2, k1:k2)
   end subroutine cleanEpar
+
+  real function lambdaAbsorb(x0, y0, z0)
+  implicit none
+  real, intent(in)  :: x0, y0, z0 ! global coordinates
+  real              :: K_abs
+  real              :: gr_max, gr_bound, gc_x, gc_y, gc_z, radius
+  lambdaAbsorb = 0.0
+  K_abs = 1.0
+
+  ! open boundaries in x direction
+  if ((boundary_Mx .eq. 0) .and. (x0 .lt. ds_abs)) then
+    lambdaAbsorb = -K_abs * ((ds_abs - x0) / ds_abs)**3
+  end if
+  if ((boundary_Px .eq. 0) .and. (x0 .gt. global_mesh%sx - ds_abs)) then
+    lambdaAbsorb = -K_abs * ((x0 - (global_mesh%sx - ds_abs)) / ds_abs)**3
+  end if
+
+  ! open boundaries in y direction
+  if ((boundary_My .eq. 0) .and. (y0 .lt. ds_abs)) then
+    lambdaAbsorb = -K_abs * ((ds_abs - y0) / ds_abs)**3
+  end if
+  if ((boundary_Py .eq. 0) .and. (y0 .gt. global_mesh%sy - ds_abs)) then
+    lambdaAbsorb = -K_abs * ((y0 - (global_mesh%sy - ds_abs)) / ds_abs)**3
+  end if
+
+  ! open boundaries in z direction
+  if ((boundary_Mz .eq. 0) .and. (z0 .lt. ds_abs)) then
+    lambdaAbsorb = -K_abs * ((ds_abs - z0) / ds_abs)**3
+  end if
+  if ((boundary_Pz .eq. 0) .and. (z0 .gt. global_mesh%sz - ds_abs)) then
+    lambdaAbsorb = -K_abs * ((z0 - (global_mesh%sz - ds_abs)) / ds_abs)**3
+  end if
+end function lambdaAbsorb
+
 
   ! subroutine checkEB()
   !   implicit none

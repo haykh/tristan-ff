@@ -138,9 +138,22 @@ contains
       call throwError('ERROR: grid size is not evenly divisible by the number of cores')
     end if
 
-    call getInput('grid', 'boundary_x', boundary_x, 1)
-    call getInput('grid', 'boundary_y', boundary_y, 1)
-    call getInput('grid', 'boundary_z', boundary_z, 1)
+    call getInput('grid', 'boundary_Px', boundary_Px)
+    call getInput('grid', 'boundary_Mx', boundary_Mx)
+    if ((boundary_Px .eq. 1) .or. (boundary_Mx .eq. 1)) then
+      boundary_Px = 1; boundary_Mx = 1
+    end if
+    call getInput('grid', 'boundary_Py', boundary_Py)
+    call getInput('grid', 'boundary_My', boundary_My)
+    if ((boundary_Py .eq. 1) .or. (boundary_My .eq. 1)) then
+      boundary_Py = 1; boundary_My = 1
+    end if
+    call getInput('grid', 'boundary_Pz', boundary_Pz)
+    call getInput('grid', 'boundary_Mz', boundary_Mz)
+    if ((boundary_Pz .eq. 1) .or. (boundary_Mz .eq. 1)) then
+      boundary_Pz = 1; boundary_Mz = 1
+    end if
+    call getInput('grid', 'ds_abs', ds_abs, 5.0)
   end subroutine initializeDomain
 
   subroutine distributeMeshblocks()

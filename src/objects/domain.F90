@@ -21,13 +21,17 @@ module m_domain
     type(meshptr), dimension(-1:1,-1:1,-1:1) :: neighbor
   end type mesh
 
-  type(meshptr)                      :: this_meshblock  ! pointer to current (rank) meshblock
-  type(mesh)                         :: global_mesh     ! global mesh parameters
-  type(mesh), allocatable, target    :: meshblocks(:)   ! meshblocks for all cpus
+  type(meshptr)                       :: this_meshblock  ! pointer to current (rank) meshblock
+  type(mesh)                          :: global_mesh     ! global mesh parameters
+  type(mesh), allocatable, target     :: meshblocks(:)   ! meshblocks for all cpus
 
   ! boundary conditions for all dimensions
   !   - boundary = 1: periodic
-  !   - boundary = 0: open
-  integer                            :: boundary_x, boundary_y, boundary_z
-  integer                            :: sendrecv_neighbors
+  !   - boundary = 0: open (absorbing)
+  !   - boundary = 2: conducting (set in userfile)
+  integer                             :: boundary_Px, boundary_Mx
+  integer                             :: boundary_Py, boundary_My
+  integer                             :: boundary_Pz, boundary_Mz
+  real                                :: ds_abs
+  integer                             :: sendrecv_neighbors
 end module m_domain

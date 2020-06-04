@@ -57,10 +57,10 @@ parser.add_argument('--nghosts',
                     default=5,
                     help='specify the # of ghost cells')
 
-# parser.add_argument('-absorb',
-#                     action='store_true',
-#                     default=False,
-#                     help='enable absorbing boundaries')
+parser.add_argument('-absorb',
+                    action='store_true',
+                    default=False,
+                    help='enable absorbing boundaries')
 
 parser.add_argument('-debug',
                     action='store_true',
@@ -125,8 +125,8 @@ else:
 
 makefile_options['EXE_NAME'] = 'tristan-ff'
 
-# if args['absorb']:
-#     makefile_options['PREPROCESSOR_FLAGS'] += '-DABSORB '
+if args['absorb']:
+    makefile_options['PREPROCESSOR_FLAGS'] += '-DABSORB '
 
 makefile_options['PREPROCESSOR_FLAGS'] += '-DNGHOST=' + str(args['nghosts']) + ' '
 
@@ -149,6 +149,7 @@ if (specific_cluster):
 print('SETUP ........................................................................')
 print('  Userfile:                ' + makefile_options['USER_FILE'])
 print('  # of ghost zones:        ' + str(args['nghosts']))
+print('  Absorbing boundaries:    ' + ('ON' if args['absorb'] else 'OFF'))
 
 # print('PHYSICS ......................................................................')
 # print('  External fields:         ' + ('ON' if args['extfields'] else 'OFF'))

@@ -24,15 +24,15 @@ contains
     integer, intent(in)                 :: ind(3)
     integer                             :: ind_t(3), indToRnk
     ind_t = ind
-    if (boundary_x .eq. 1) then
+    if (boundary_Px .eq. 1) then
       if (ind_t(1) .lt. 0) ind_t(1) = ind_t(1) + sizex
       ind_t(1) = modulo(ind_t(1), sizex)
     end if
-    if (boundary_y .eq. 1) then
+    if (boundary_Py .eq. 1) then
       if (ind_t(2) .lt. 0) ind_t(2) = ind_t(2) + sizey
       ind_t(2) = modulo(ind_t(2), sizey)
     end if
-    if (boundary_z .eq. 1) then
+    if (boundary_Pz .eq. 1) then
       if (ind_t(3) .lt. 0) ind_t(3) = ind_t(3) + sizez
       ind_t(3) = modulo(ind_t(3), sizez)
     end if
