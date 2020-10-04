@@ -14,8 +14,8 @@ module m_writeoutput
   implicit none
 
   integer                 :: output_start, output_interval, output_istep
-  integer                 :: n_fld_vars, n_dom_vars
-  character(len=STR_MAX)  :: fld_vars(100), dom_vars(100)
+  integer                 :: n_fld_vars
+  character(len=STR_MAX)  :: fld_vars(100)
 
   !--- PRIVATE functions -----------------------------------------!
   #ifdef HDF5
@@ -32,36 +32,133 @@ contains
     implicit none
     integer, intent(in)        :: time
     integer                    :: step, ierr
-
-    call initializeOutput()
-
+    call defineFieldVarsToOutput()
     step = output_index
     #ifdef HDF5
       call writeParams_hdf5(step, time)
         call printDiag((mpi_rank .eq. 0), "...writeParams_hdf5()", .true.)
       call writeFields_hdf5(step, time)
         call printDiag((mpi_rank .eq. 0), "...writeFields_hdf5()", .true.)
-      call writeDomain_hdf5(step, time)
-        call printDiag((mpi_rank .eq. 0), "...writeDomain_hdf5()", .true.)
     #endif
     call printDiag((mpi_rank .eq. 0), "output()", .true.)
     output_index = output_index + 1
   end subroutine writeOutput
 
-  subroutine initializeOutput()
+  subroutine defineFieldVarsToOutput()
     implicit none
     ! initialize field variables
-    n_fld_vars = 12
-    fld_vars(1 : n_fld_vars) = (/'ex   ', 'ey   ', 'ez   ',&
-                               & 'bx   ', 'by   ', 'bz   ',&
-                               & 'var1 ', 'var2 ', 'var3 ',&
-                               & 'xx   ', 'yy   ', 'zz   '/)
+    !   total number of fields
+    n_fld_vars = 0
+    fld_vars(n_fld_vars + 1 : n_fld_vars + 1 + 12) =&
+                                 & (/'ex   ', 'ey   ', 'ez   ',&
+                                   & 'bx   ', 'by   ', 'bz   ',&
+                                   & 'jx   ', 'jy   ', 'jz   ',&
+                                   & 'xx   ', 'yy   ', 'zz   '/)
+    n_fld_vars = n_fld_vars + 12
 
-    ! initialize domain output variables
-    n_dom_vars = 6
-    dom_vars(1 : 6) = (/'x0   ', 'y0   ', 'z0   ',&
-                      & 'sx   ', 'sy   ', 'sz   '/)
-  end subroutine initializeOutput
+    fld_vars(n_fld_vars + 1 : n_fld_vars + 1 + 4) = (/'curlBx', 'curlBy', 'curlBz', 'divE'/)
+    n_fld_vars = n_fld_vars + 4
+
+    fld_vars(n_fld_vars + 1 : n_fld_vars + 1 + 3) = (/'var1', 'var2', 'var3'/)
+    n_fld_vars = n_fld_vars + 3
+  end subroutine defineFieldVarsToOutput
+
+  ! writes a field specified by `fld_var` from gridcell `i,j,k` ...
+  ! ... to `sm_arr(i1, j1, k1)` with proper interpolation etc for the output
+  subroutine selectFieldForOutput(fld_var, i1, j1, k1, i, j, k)
+    implicit none
+    character(len=STR_MAX), intent(in)  :: fld_var
+    integer(kind=2), intent(in)         :: i1, j1, k1, i, j, k
+    real                                :: ex0, ey0, ez0, bx0, by0, bz0, jx0, jy0, jz0
+    real                                :: dx1, dx2, dy1, dy2, dz1, dz2, divE
+    select case (trim(fld_var))
+    case('ex')
+      #ifndef DEBUG
+        call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
+      #else
+        ex0 = ex(i, j, k)
+      #endif
+      sm_arr(i1, j1, k1) = ex0
+    case('ey')
+      #ifndef DEBUG
+        call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
+      #else
+        ey0 = ey(i, j, k)
+      #endif
+      sm_arr(i1, j1, k1) = ey0
+    case('ez')
+      #ifndef DEBUG
+        call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
+      #else
+        ez0 = ez(i, j, k)
+      #endif
+      sm_arr(i1, j1, k1) = ez0
+    case('bx')
+      #ifndef DEBUG
+        call interpFromFaces(0.0, 0.0, 0.0, i, j, k, bx, by, bz, bx0, by0, bz0)
+      #else
+        bx0 = bx(i, j, k)
+      #endif
+      sm_arr(i1, j1, k1) = bx0
+    case('by')
+      #ifndef DEBUG
+        call interpFromFaces(0.0, 0.0, 0.0, i, j, k, bx, by, bz, bx0, by0, bz0)
+      #else
+        by0 = by(i, j, k)
+      #endif
+      sm_arr(i1, j1, k1) = by0
+    case('bz')
+      #ifndef DEBUG
+        call interpFromFaces(0.0, 0.0, 0.0, i, j, k, bx, by, bz, bx0, by0, bz0)
+      #else
+        bz0 = bz(i, j, k)
+      #endif
+      sm_arr(i1, j1, k1) = bz0
+    case('jx')
+      call computeForceFreeCurrent(jx0, jy0, jz0, i, j, k)
+      sm_arr(i1, j1, k1) = jx0
+    case('jy')
+      call computeForceFreeCurrent(jx0, jy0, jz0, i, j, k)
+      sm_arr(i1, j1, k1) = jy0
+    case('jz')
+      call computeForceFreeCurrent(jx0, jy0, jz0, i, j, k)
+      sm_arr(i1, j1, k1) = jz0
+    case('curlBx')
+      dx1 = (bz(    i,    j,    k) - bz(    i,j - 1,    k)) - (by(    i,    j,    k) - by(    i,    j,k - 1))
+      dx2 = (bz(i - 1,    j,    k) - bz(i - 1,j - 1,    k)) - (by(i - 1,    j,    k) - by(i - 1,    j,k - 1))
+      sm_arr(i1, j1, k1) = 0.5 * (dx1 + dx2)
+    case('curlBy')
+      dy1 = (bx(    i,    j,    k) - bx(    i,    j,k - 1)) - (bz(    i,    j,    k) - bz(i - 1,    j,    k))
+      dy2 = (bx(    i,j - 1,    k) - bx(    i,j - 1,k - 1)) - (bz(    i,j - 1,    k) - bz(i - 1,j - 1,    k))
+      sm_arr(i1, j1, k1) = 0.5 * (dy1 + dy2)
+    case('curlBz')
+      dz1 = (by(    i,    j,    k) - by(i - 1,    j,    k)) - (bx(    i,    j,    k) - bx(    i,j - 1,    k))
+      dz2 = (by(    i,    j,k - 1) - by(i - 1,    j,k - 1)) - (bx(    i,    j,k - 1) - bx(    i,j - 1,k - 1))
+      sm_arr(i1, j1, k1) = 0.5 * (dz1 + dz2)
+    case('divE')
+      divE = (ex(i, j, k) - ex(i - 1, j, k)) +&
+           & (ey(i, j, k) - ey(i, j - 1, k)) +&
+           & (ez(i, j, k) - ez(i, j, k - 1))
+      sm_arr(i1, j1, k1) = divE
+    case('xx')
+      sm_arr(i1, j1, k1) = REAL(this_meshblock%ptr%x0 + i, 4)
+    case('yy')
+      sm_arr(i1, j1, k1) = REAL(this_meshblock%ptr%y0 + j, 4)
+    case('zz')
+      sm_arr(i1, j1, k1) = REAL(this_meshblock%ptr%z0 + k, 4)
+    case('var1')
+      call userOutput(1, dummy1_, i, j, k)
+      sm_arr(i1, j1, k1) = dummy1_
+    case('var2')
+      call userOutput(2, dummy1_, i, j, k)
+      sm_arr(i1, j1, k1) = dummy1_
+    case('var3')
+      call userOutput(3, dummy1_, i, j, k)
+      sm_arr(i1, j1, k1) = dummy1_
+    case default
+      call throwError("ERROR: unrecognized `fldname`")
+    end select
+  end subroutine selectFieldForOutput
 
   #ifdef HDF5
 
@@ -353,67 +450,7 @@ contains
             i = i_start + i1 * output_istep
             j = j_start + j1 * output_istep
             k = k_start + k1 * output_istep
-            select case (trim(fld_vars(f)))
-            case('ex')
-              #ifndef DEBUG
-                call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
-              #else
-                ex0 = ex(i, j, k)
-              #endif
-              sm_arr(i1, j1, k1) = ex0
-            case('ey')
-              #ifndef DEBUG
-                call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
-              #else
-                ey0 = ey(i, j, k)
-              #endif
-              sm_arr(i1, j1, k1) = ey0
-            case('ez')
-              #ifndef DEBUG
-                call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
-              #else
-                ez0 = ez(i, j, k)
-              #endif
-              sm_arr(i1, j1, k1) = ez0
-            case('bx')
-              #ifndef DEBUG
-                call interpFromFaces(0.0, 0.0, 0.0, i, j, k, bx, by, bz, bx0, by0, bz0)
-              #else
-                bx0 = bx(i, j, k)
-              #endif
-              sm_arr(i1, j1, k1) = bx0
-            case('by')
-              #ifndef DEBUG
-                call interpFromFaces(0.0, 0.0, 0.0, i, j, k, bx, by, bz, bx0, by0, bz0)
-              #else
-                by0 = by(i, j, k)
-              #endif
-              sm_arr(i1, j1, k1) = by0
-            case('bz')
-              #ifndef DEBUG
-                call interpFromFaces(0.0, 0.0, 0.0, i, j, k, bx, by, bz, bx0, by0, bz0)
-              #else
-                bz0 = bz(i, j, k)
-              #endif
-              sm_arr(i1, j1, k1) = bz0
-            case('var1')
-              call userOutput(1, dummy1_, i, j, k)
-              sm_arr(i1, j1, k1) = dummy1_
-            case('var2')
-              call userOutput(2, dummy1_, i, j, k)
-              sm_arr(i1, j1, k1) = dummy1_
-            case('var3')
-              call userOutput(3, dummy1_, i, j, k)
-              sm_arr(i1, j1, k1) = dummy1_
-            case('xx')
-              sm_arr(i1, j1, k1) = REAL(this_meshblock%ptr%x0 + i, 4)
-            case('yy')
-              sm_arr(i1, j1, k1) = REAL(this_meshblock%ptr%y0 + j, 4)
-            case('zz')
-              sm_arr(i1, j1, k1) = REAL(this_meshblock%ptr%z0 + k, 4)
-            case default
-              call throwError("ERROR: unrecognized `fld_vars(f)`")
-            end select
+            call selectFieldForOutput(fld_vars(f), i1, j1, k1, i, j, k)
           end do
         end do
       end do
@@ -439,76 +476,6 @@ contains
     deallocate(sm_arr)
   end subroutine writeFields_hdf5
 
-  subroutine writeDomain_hdf5(step, time)
-    implicit none
-    integer, intent(in)               :: step, time
-    character(len=STR_MAX)            :: stepchar, filename
-    integer                           :: error, s, i, datarank, d, rnk
-    integer(HID_T)                    :: file_id, dset_id, dspace_id
-    integer(HSIZE_T), dimension(1)    :: data_dims
-    integer, allocatable, dimension(:):: domain_data
-
-    datarank = 1
-    data_dims(1) = mpi_size
-
-    ! only root rank writes the domain file
-    if (mpi_rank .eq. 0) then
-      write(stepchar, "(i5.5)") step
-      filename = trim(output_dir_name) // '/domain.' // trim(stepchar)
-
-      ! Initialize FORTRAN interface
-      call h5open_f(error)
-      ! Create a new file using default properties
-      call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
-
-      allocate(domain_data(mpi_size))
-
-      do d = 1, n_dom_vars
-        select case (trim(dom_vars(d)))
-          case('x0')
-            do rnk = 0, mpi_size - 1
-              domain_data(rnk + 1) = meshblocks(rnk + 1)%x0
-            end do
-          case('y0')
-            do rnk = 0, mpi_size - 1
-              domain_data(rnk + 1) = meshblocks(rnk + 1)%y0
-            end do
-          case('z0')
-            do rnk = 0, mpi_size - 1
-              domain_data(rnk + 1) = meshblocks(rnk + 1)%z0
-            end do
-          case('sx')
-            do rnk = 0, mpi_size - 1
-              domain_data(rnk + 1) = meshblocks(rnk + 1)%sx
-            end do
-          case('sy')
-            do rnk = 0, mpi_size - 1
-              domain_data(rnk + 1) = meshblocks(rnk + 1)%sy
-            end do
-          case('sz')
-            do rnk = 0, mpi_size - 1
-              domain_data(rnk + 1) = meshblocks(rnk + 1)%sz
-            end do
-          case default
-            call throwError('ERROR: unrecognized `dom_vars`: `'//trim(dom_vars(d))//'`')
-        end select
-
-        call h5screate_simple_f(datarank, data_dims, dspace_id, error)
-        call h5dcreate_f(file_id, dom_vars(d), H5T_NATIVE_INTEGER, dspace_id, &
-                       & dset_id, error)
-        call h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, domain_data, data_dims, error)
-        call h5dclose_f(dset_id, error)
-        call h5sclose_f(dspace_id, error)
-      end do
-
-      ! Close the file
-      call h5fclose_f(file_id, error)
-      ! Close FORTRAN interface
-      call h5close_f(error)
-
-      if (allocated(domain_data)) deallocate(domain_data)
-    end if
-  end subroutine writeDomain_hdf5
   #endif
 
 end module m_writeoutput

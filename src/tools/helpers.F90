@@ -255,4 +255,52 @@ contains
     c1 = c01 * (1 - dy) + c11 * dy
     intfz = c0 * (1 - dz) + c1 * dz
   end subroutine interpFromFaces
+
+  subroutine computeForceFreeCurrent(jx0, jy0, jz0, i, j, k)
+    implicit none
+    real, intent(out)   :: jx0, jy0, jz0
+    integer, intent(in) :: i, j, k
+    real                :: divE, ex0, ey0, ez0, bx0, by0, bz0, bb2
+    real                :: dx1, dx2, dy1, dy2, dz1, dz2, curls
+    real                :: curlBx, curlBy, curlBz
+    real                :: curlEx, curlEy, curlEz
+    real                :: EcrossBx, EcrossBy, EcrossBz
+    ! `div E` on nodes
+    divE = (ex(i, j, k) - ex(i - 1, j, k)) +&
+         & (ey(i, j, k) - ey(i, j - 1, k)) +&
+         & (ez(i, j, k) - ez(i, j, k - 1))
+
+    ! `E` and `B` on nodes
+    call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
+    call interpFromFaces(0.0, 0.0, 0.0, i, j, k, bx, by, bz, bx0, by0, bz0)
+    bb2 = bx0**2 + by0**2 + bz0**2
+
+    ! `curl B` on nodes
+    dx1 = (bz(    i,    j,    k) - bz(    i,j - 1,    k)) - (by(    i,    j,    k) - by(    i,    j,k - 1))
+    dx2 = (bz(i - 1,    j,    k) - bz(i - 1,j - 1,    k)) - (by(i - 1,    j,    k) - by(i - 1,    j,k - 1))
+    curlBx = 0.5 * (dx1 + dx2)
+    dy1 = (bx(    i,    j,    k) - bx(    i,    j,k - 1)) - (bz(    i,    j,    k) - bz(i - 1,    j,    k))
+    dy2 = (bx(    i,j - 1,    k) - bx(    i,j - 1,k - 1)) - (bz(    i,j - 1,    k) - bz(i - 1,j - 1,    k))
+    curlBy = 0.5 * (dy1 + dy2)
+    dz1 = (by(    i,    j,    k) - by(i - 1,    j,    k)) - (bx(    i,    j,    k) - bx(    i,j - 1,    k))
+    dz2 = (by(    i,    j,k - 1) - by(i - 1,    j,k - 1)) - (bx(    i,    j,k - 1) - bx(    i,j - 1,k - 1))
+    curlBz = 0.5 * (dz1 + dz2)
+
+    ! `curl E` on nodes
+    curlEx = 0.5 * (0.5 * (ez(i, j + 1, k) - ez(i, j - 1, k)) + 0.5 * (ez(i, j + 1, k - 1) - ez(i, j - 1, k - 1))) -&
+           & 0.5 * (0.5 * (ey(i, j, k + 1) - ey(i, j, k - 1)) + 0.5 * (ey(i, j - 1, k + 1) - ey(i, j - 1, k - 1)))
+    curlEy = 0.5 * (0.5 * (ex(i, j, k + 1) - ex(i, j, k - 1)) + 0.5 * (ex(i - 1, j, k + 1) - ex(i - 1, j, k - 1))) -&
+           & 0.5 * (0.5 * (ez(i + 1, j, k) - ez(i - 1, j, k)) + 0.5 * (ez(i + 1, j, k - 1) - ez(i - 1, j, k - 1)))
+    curlEz = 0.5 * (0.5 * (ey(i + 1, j, k) - ey(i - 1, j, k)) + 0.5 * (ey(i + 1, j - 1, k) - ey(i - 1, j - 1, k))) -&
+           & 0.5 * (0.5 * (ex(i, j + 1, k) - ex(i, j - 1, k)) + 0.5 * (ex(i - 1, j + 1, k) - ex(i - 1, j - 1, k)))
+
+    curls = ((bx0 * curlBx + by0 * curlBy + bz0 * curlBz) - (ex0 * curlEx + ey0 * curlEy + ez0 * curlEz))
+    EcrossBx = (ey0 * bz0 - ez0 * by0)
+    EcrossBy = -(ex0 * bz0 - ez0 * bx0)
+    EcrossBz = (ex0 * by0 - ey0 * bx0)
+
+    jx0 = (divE * EcrossBx - bx0 * curls) / bb2
+    jy0 = (divE * EcrossBy - by0 * curls) / bb2
+    jz0 = (divE * EcrossBz - bz0 * curls) / bb2
+  end subroutine computeForceFreeCurrent
 end module m_helpers
