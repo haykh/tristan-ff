@@ -16,16 +16,16 @@ module m_writeoutput
   integer                 :: output_start, output_interval, output_istep
   integer                 :: n_fld_vars
   character(len=STR_MAX)  :: fld_vars(100)
+  real, allocatable       :: sm_arr(:,:,:)
 
   !--- PRIVATE functions -----------------------------------------!
   #ifdef HDF5
-    private :: writeFields_hdf5, writeDomain_hdf5, writeXDMF_hdf5
+    private :: writeFields_hdf5, writeXDMF_hdf5
   #endif
-  private :: initializeOutput
   !...............................................................!
 
   !--- PRIVATE variables -----------------------------------------!
-  private :: n_fld_vars, fld_vars, n_dom_vars, dom_vars
+  private :: n_fld_vars, fld_vars
   !...............................................................!
 contains
   subroutine writeOutput(time)
@@ -69,8 +69,12 @@ contains
     implicit none
     character(len=STR_MAX), intent(in)  :: fld_var
     integer(kind=2), intent(in)         :: i1, j1, k1, i, j, k
+    integer(kind=2)                     :: im1, jm1, km1
     real                                :: ex0, ey0, ez0, bx0, by0, bz0, jx0, jy0, jz0
-    real                                :: dx1, dx2, dy1, dy2, dz1, dz2, divE
+    real                                :: dx1, dx2, dy1, dy2, dz1, dz2, divE, dummy1_
+    im1 = MAX(i - 1, -NGHOST)
+    jm1 = MAX(j - 1, -NGHOST)
+    km1 = MAX(k - 1, -NGHOST)
     select case (trim(fld_var))
     case('ex')
       #ifndef DEBUG
@@ -124,21 +128,21 @@ contains
       call computeForceFreeCurrent(jx0, jy0, jz0, i, j, k)
       sm_arr(i1, j1, k1) = jz0
     case('curlBx')
-      dx1 = (bz(    i,    j,    k) - bz(    i,j - 1,    k)) - (by(    i,    j,    k) - by(    i,    j,k - 1))
-      dx2 = (bz(i - 1,    j,    k) - bz(i - 1,j - 1,    k)) - (by(i - 1,    j,    k) - by(i - 1,    j,k - 1))
+      dx1 = (bz(i, j, k) - bz(i, jm1, k)) - (by(i, j, k) - by(i, j, km1))
+      dx2 = (bz(im1, j, k) - bz(im1, jm1, k)) - (by(im1, j, k) - by(im1, j, km1))
       sm_arr(i1, j1, k1) = 0.5 * (dx1 + dx2)
     case('curlBy')
-      dy1 = (bx(    i,    j,    k) - bx(    i,    j,k - 1)) - (bz(    i,    j,    k) - bz(i - 1,    j,    k))
-      dy2 = (bx(    i,j - 1,    k) - bx(    i,j - 1,k - 1)) - (bz(    i,j - 1,    k) - bz(i - 1,j - 1,    k))
+      dy1 = (bx(i, j, k) - bx(i, j, km1)) - (bz(i, j, k) - bz(im1, j, k))
+      dy2 = (bx(i, jm1, k) - bx(i, jm1, km1)) - (bz(i, jm1, k) - bz(im1, jm1, k))
       sm_arr(i1, j1, k1) = 0.5 * (dy1 + dy2)
     case('curlBz')
-      dz1 = (by(    i,    j,    k) - by(i - 1,    j,    k)) - (bx(    i,    j,    k) - bx(    i,j - 1,    k))
-      dz2 = (by(    i,    j,k - 1) - by(i - 1,    j,k - 1)) - (bx(    i,    j,k - 1) - bx(    i,j - 1,k - 1))
+      dz1 = (by(i, j, k) - by(im1, j, k)) - (bx(i, j, k) - bx(i, jm1, k))
+      dz2 = (by(i, j, km1) - by(im1, j, km1)) - (bx(i, j, km1) - bx(i, jm1, km1))
       sm_arr(i1, j1, k1) = 0.5 * (dz1 + dz2)
     case('divE')
-      divE = (ex(i, j, k) - ex(i - 1, j, k)) +&
-           & (ey(i, j, k) - ey(i, j - 1, k)) +&
-           & (ez(i, j, k) - ez(i, j, k - 1))
+      divE = (ex(i, j, k) - ex(im1, j, k)) +&
+           & (ey(i, j, k) - ey(i, jm1, k)) +&
+           & (ez(i, j, k) - ez(i, j, km1))
       sm_arr(i1, j1, k1) = divE
     case('xx')
       sm_arr(i1, j1, k1) = REAL(this_meshblock%ptr%x0 + i, 4)
@@ -298,7 +302,6 @@ contains
     integer(HSIZE_T), dimension(3)    :: global_dims, blocks
     real                              :: ex0, ey0, ez0, bx0, by0, bz0, dummy1_
     real                              :: jx0, jy0, jz0
-    real, allocatable                 :: sm_arr(:,:,:)
 
     ! downsampling variables
     integer :: this_x0, this_y0, this_z0, this_sx, this_sy, this_sz
@@ -407,7 +410,7 @@ contains
       call writeXDMF_hdf5(step, time, glob_n_i, glob_n_j, glob_n_k)
     end if
 
-    allocate(sm_arr(0:n_i, 0:n_j, 0:n_k))
+    if (.not. allocated(sm_arr)) allocate(sm_arr(0:n_i, 0:n_j, 0:n_k))
 
     offsets(1) = offset_i
     offsets(2) = offset_j
@@ -450,7 +453,8 @@ contains
             i = i_start + i1 * output_istep
             j = j_start + j1 * output_istep
             k = k_start + k1 * output_istep
-            call selectFieldForOutput(fld_vars(f), i1, j1, k1, i, j, k)
+            call selectFieldForOutput(fld_vars(f), INT(i1,2), INT(j1,2), INT(k1,2),&
+                                                 & INT(i,2),  INT(j,2),  INT(k,2))
           end do
         end do
       end do

@@ -95,8 +95,9 @@ contains
                            & intfx, intfy, intfz)
     !$omp declare simd(interpFromEdges)
     implicit none
-    integer, intent(in)           :: i, j, k
+    integer(kind=2), intent(in)   :: i, j, k
     real, intent(in)              :: dx, dy, dz
+    integer(kind=2)               :: im1, jm1, km1, ip1, jp1, kp1
     real, intent(in)              :: fx(-NGHOST : this_meshblock%ptr%sx - 1 + NGHOST,&
                                       & -NGHOST : this_meshblock%ptr%sy - 1 + NGHOST,&
                                       & -NGHOST : this_meshblock%ptr%sz - 1 + NGHOST)
@@ -109,49 +110,56 @@ contains
     real, intent(out)             :: intfx, intfy, intfz
     real                          :: c000, c100, c001, c101, c010, c110, c011, c111,&
                                    & c00, c01, c10, c11, c0, c1
+    im1 = MAX(i - 1, -NGHOST)
+    jm1 = MAX(j - 1, -NGHOST)
+    km1 = MAX(k - 1, -NGHOST)
+    ip1 = MIN(i + 1, this_meshblock%ptr%sx - 1 + NGHOST)
+    jp1 = MIN(j + 1, this_meshblock%ptr%sy - 1 + NGHOST)
+    kp1 = MIN(k + 1, this_meshblock%ptr%sz - 1 + NGHOST)
+
     ! f_x
-    c000 = 0.5 * (fx(     i,      j,      k) + fx(  i - 1,      j,      k))
-    c100 = 0.5 * (fx(     i,      j,      k) + fx(  i + 1,      j,      k))
-    c010 = 0.5 * (fx(     i,  j + 1,      k) + fx(  i - 1,  j + 1,      k))
-    c110 = 0.5 * (fx(     i,  j + 1,      k) + fx(  i + 1,  j + 1,      k))
+    c000 = 0.5 * (fx(     i,      j,      k) + fx(  im1,      j,      k))
+    c100 = 0.5 * (fx(     i,      j,      k) + fx(  ip1,      j,      k))
+    c010 = 0.5 * (fx(     i,  jp1,      k) + fx(  im1,  jp1,      k))
+    c110 = 0.5 * (fx(     i,  jp1,      k) + fx(  ip1,  jp1,      k))
     c00 = c000 * (1 - dx) + c100 * dx
     c10 = c010 * (1 - dx) + c110 * dx
     c0 = c00 * (1 - dy) + c10 * dy
-    c001 = 0.5 * (fx(     i,      j,  k + 1) + fx(  i - 1,      j,  k + 1))
-    c101 = 0.5 * (fx(     i,      j,  k + 1) + fx(  i + 1,      j,  k + 1))
-    c011 = 0.5 * (fx(     i,  j + 1,  k + 1) + fx(  i - 1,  j + 1,  k + 1))
-    c111 = 0.5 * (fx(     i,  j + 1,  k + 1) + fx(  i + 1,  j + 1,  k + 1))
+    c001 = 0.5 * (fx(     i,      j,  kp1) + fx(  im1,      j,  kp1))
+    c101 = 0.5 * (fx(     i,      j,  kp1) + fx(  ip1,      j,  kp1))
+    c011 = 0.5 * (fx(     i,  jp1,  kp1) + fx(  im1,  jp1,  kp1))
+    c111 = 0.5 * (fx(     i,  jp1,  kp1) + fx(  ip1,  jp1,  kp1))
     c01 = c001 * (1 - dx) + c101 * dx
     c11 = c011 * (1 - dx) + c111 * dx
     c1 = c01 * (1 - dy) + c11 * dy
     intfx = c0 * (1 - dz) + c1 * dz
 
     ! f_y
-    c000 = 0.5 * (fy(     i,      j,      k) + fy(      i,  j - 1,      k))
-    c100 = 0.5 * (fy( i + 1,      j,      k) + fy(  i + 1,  j - 1,      k))
-    c010 = 0.5 * (fy(     i,      j,      k) + fy(      i,  j + 1,      k))
-    c110 = 0.5 * (fy( i + 1,      j,      k) + fy(  i + 1,  j + 1,      k))
+    c000 = 0.5 * (fy(     i,      j,      k) + fy(      i,  jm1,      k))
+    c100 = 0.5 * (fy( ip1,      j,      k) + fy(  ip1,  jm1,      k))
+    c010 = 0.5 * (fy(     i,      j,      k) + fy(      i,  jp1,      k))
+    c110 = 0.5 * (fy( ip1,      j,      k) + fy(  ip1,  jp1,      k))
     c00 = c000 * (1 - dx) + c100 * dx
     c10 = c010 * (1 - dx) + c110 * dx
     c0 = c00 * (1 - dy) + c10 * dy
-    c001 = 0.5 * (fy(     i,      j,  k + 1) + fy(      i,  j - 1,  k + 1))
-    c101 = 0.5 * (fy( i + 1,      j,  k + 1) + fy(  i + 1,  j - 1,  k + 1))
-    c011 = 0.5 * (fy(     i,      j,  k + 1) + fy(      i,  j + 1,  k + 1))
-    c111 = 0.5 * (fy( i + 1,      j,  k + 1) + fy(  i + 1,  j + 1,  k + 1))
+    c001 = 0.5 * (fy(     i,      j,  kp1) + fy(      i,  jm1,  kp1))
+    c101 = 0.5 * (fy( ip1,      j,  kp1) + fy(  ip1,  jm1,  kp1))
+    c011 = 0.5 * (fy(     i,      j,  kp1) + fy(      i,  jp1,  kp1))
+    c111 = 0.5 * (fy( ip1,      j,  kp1) + fy(  ip1,  jp1,  kp1))
     c01 = c001 * (1 - dx) + c101 * dx
     c11 = c011 * (1 - dx) + c111 * dx
     c1 = c01 * (1 - dy) + c11 * dy
     intfy = c0 * (1 - dz) + c1 * dz
 
     ! f_z
-    c000 = 0.5 * (fz(     i,      j,      k) + fz(      i,      j,  k - 1))
-    c100 = 0.5 * (fz( i + 1,      j,      k) + fz(  i + 1,      j,  k - 1))
-    c010 = 0.5 * (fz(     i,  j + 1,      k) + fz(      i,  j + 1,  k - 1))
-    c110 = 0.5 * (fz( i + 1,  j + 1,      k) + fz(  i + 1,  j + 1,  k - 1))
-    c001 = 0.5 * (fz(     i,      j,      k) + fz(      i,      j,  k + 1))
-    c101 = 0.5 * (fz( i + 1,      j,      k) + fz(  i + 1,      j,  k + 1))
-    c011 = 0.5 * (fz(     i,  j + 1,      k) + fz(      i,  j + 1,  k + 1))
-    c111 = 0.5 * (fz( i + 1,  j + 1,      k) + fz(  i + 1,  j + 1,  k + 1))
+    c000 = 0.5 * (fz(     i,      j,      k) + fz(      i,      j,  km1))
+    c100 = 0.5 * (fz( ip1,      j,      k) + fz(  ip1,      j,  km1))
+    c010 = 0.5 * (fz(     i,  jp1,      k) + fz(      i,  jp1,  km1))
+    c110 = 0.5 * (fz( ip1,  jp1,      k) + fz(  ip1,  jp1,  km1))
+    c001 = 0.5 * (fz(     i,      j,      k) + fz(      i,      j,  kp1))
+    c101 = 0.5 * (fz( ip1,      j,      k) + fz(  ip1,      j,  kp1))
+    c011 = 0.5 * (fz(     i,  jp1,      k) + fz(      i,  jp1,  kp1))
+    c111 = 0.5 * (fz( ip1,  jp1,      k) + fz(  ip1,  jp1,  kp1))
     c00 = c000 * (1 - dx) + c100 * dx
     c01 = c001 * (1 - dx) + c101 * dx
     c10 = c010 * (1 - dx) + c110 * dx
@@ -166,8 +174,9 @@ contains
                            & intfx, intfy, intfz)
     !$omp declare simd(interpFromFaces)
     implicit none
-    integer, intent(in)           :: i, j, k
+    integer(kind=2), intent(in)   :: i, j, k
     real, intent(in)              :: dx, dy, dz
+    integer(kind=2)               :: im1, jm1, km1, ip1, jp1, kp1
     real, intent(in)              :: fx(-NGHOST : this_meshblock%ptr%sx - 1 + NGHOST,&
                                       & -NGHOST : this_meshblock%ptr%sy - 1 + NGHOST,&
                                       & -NGHOST : this_meshblock%ptr%sz - 1 + NGHOST)
@@ -180,23 +189,30 @@ contains
     real, intent(out)             :: intfx, intfy, intfz
     real                          :: c000, c100, c001, c101, c010, c110, c011, c111,&
                                    & c00, c01, c10, c11, c0, c1
+    im1 = MAX(i - 1, -NGHOST)
+    jm1 = MAX(j - 1, -NGHOST)
+    km1 = MAX(k - 1, -NGHOST)
+    ip1 = MIN(i + 1, this_meshblock%ptr%sx - 1 + NGHOST)
+    jp1 = MIN(j + 1, this_meshblock%ptr%sy - 1 + NGHOST)
+    kp1 = MIN(k + 1, this_meshblock%ptr%sz - 1 + NGHOST)
+
     ! f_x
-    c000 = 0.25 * (fx(      i,      j,      k) + fx(      i,  j - 1,      k) +&
-                 & fx(      i,      j,  k - 1) + fx(      i,  j - 1,  k - 1))
-    c100 = 0.25 * (fx(  i + 1,      j,      k) + fx(  i + 1,  j - 1,      k) +&
-                 & fx(  i + 1,      j,  k - 1) + fx(  i + 1,  j - 1,  k - 1))
-    c001 = 0.25 * (fx(      i,      j,      k) + fx(      i,      j,  k + 1) +&
-                 & fx(      i,  j - 1,      k) + fx(      i,  j - 1,  k + 1))
-    c101 = 0.25 * (fx(  i + 1,      j,      k) + fx(  i + 1,      j,  k + 1) +&
-                 & fx(  i + 1,  j - 1,      k) + fx(  i + 1,  j - 1,  k + 1))
-    c010 = 0.25 * (fx(      i,      j,      k) + fx(      i,  j + 1,      k) +&
-                 & fx(      i,      j,  k - 1) + fx(      i,  j + 1,  k - 1))
-    c110 = 0.25 * (fx(  i + 1,      j,      k) + fx(  i + 1,      j,  k - 1) +&
-                 & fx(  i + 1,  j + 1,  k - 1) + fx(  i + 1,  j + 1,      k))
-    c011 = 0.25 * (fx(      i,      j,      k) + fx(      i,  j + 1,      k) +&
-                 & fx(      i,  j + 1,  k + 1) + fx(      i,      j,  k + 1))
-    c111 = 0.25 * (fx(  i + 1,      j,      k) + fx(  i + 1,  j + 1,      k) +&
-                 & fx(  i + 1,  j + 1,  k + 1) + fx(  i + 1,      j,  k + 1))
+    c000 = 0.25 * (fx(      i,      j,      k) + fx(      i,  jm1,      k) +&
+                 & fx(      i,      j,  km1) + fx(      i,  jm1,  km1))
+    c100 = 0.25 * (fx(  ip1,      j,      k) + fx(  ip1,  jm1,      k) +&
+                 & fx(  ip1,      j,  km1) + fx(  ip1,  jm1,  km1))
+    c001 = 0.25 * (fx(      i,      j,      k) + fx(      i,      j,  kp1) +&
+                 & fx(      i,  jm1,      k) + fx(      i,  jm1,  kp1))
+    c101 = 0.25 * (fx(  ip1,      j,      k) + fx(  ip1,      j,  kp1) +&
+                 & fx(  ip1,  jm1,      k) + fx(  ip1,  jm1,  kp1))
+    c010 = 0.25 * (fx(      i,      j,      k) + fx(      i,  jp1,      k) +&
+                 & fx(      i,      j,  km1) + fx(      i,  jp1,  km1))
+    c110 = 0.25 * (fx(  ip1,      j,      k) + fx(  ip1,      j,  km1) +&
+                 & fx(  ip1,  jp1,  km1) + fx(  ip1,  jp1,      k))
+    c011 = 0.25 * (fx(      i,      j,      k) + fx(      i,  jp1,      k) +&
+                 & fx(      i,  jp1,  kp1) + fx(      i,      j,  kp1))
+    c111 = 0.25 * (fx(  ip1,      j,      k) + fx(  ip1,  jp1,      k) +&
+                 & fx(  ip1,  jp1,  kp1) + fx(  ip1,      j,  kp1))
     c00 = c000 * (1 - dx) + c100 * dx
     c01 = c001 * (1 - dx) + c101 * dx
     c10 = c010 * (1 - dx) + c110 * dx
@@ -206,22 +222,22 @@ contains
     intfx = c0 * (1 - dz) + c1 * dz
 
     ! f_y
-    c000 = 0.25 * (fy(  i - 1,      j,  k - 1) + fy(  i - 1,      j,      k) +&
-                 & fy(      i,      j,  k - 1) + fy(      i,      j,      k))
-    c100 = 0.25 * (fy(      i,      j,  k - 1) + fy(      i,      j,      k) +&
-                 & fy(  i + 1,      j,  k - 1) + fy(  i + 1,      j,      k))
-    c001 = 0.25 * (fy(  i - 1,      j,      k) + fy(  i - 1,      j,  k + 1) +&
-                 & fy(      i,      j,      k) + fy(      i,      j,  k + 1))
-    c101 = 0.25 * (fy(      i,      j,      k) + fy(      i,      j,  k + 1) +&
-                 & fy(  i + 1,      j,      k) + fy(  i + 1,      j,  k + 1))
-    c010 = 0.25 * (fy(  i - 1,  j + 1,  k - 1) + fy(  i - 1,  j + 1,      k) +&
-                 & fy(      i,  j + 1,  k - 1) + fy(      i,  j + 1,      k))
-    c110 = 0.25 * (fy(      i,  j + 1,  k - 1) + fy(      i,  j + 1,      k) +&
-                 & fy(  i + 1,  j + 1,  k - 1) + fy(  i + 1,  j + 1,      k))
-    c011 = 0.25 * (fy(  i - 1,  j + 1,      k) + fy(  i - 1,  j + 1,  k + 1) +&
-                 & fy(      i,  j + 1,      k) + fy(      i,  j + 1,  k + 1))
-    c111 = 0.25 * (fy(      i,  j + 1,      k) + fy(      i,  j + 1,  k + 1) +&
-                 & fy(  i + 1,  j + 1,      k) + fy(  i + 1,  j + 1,  k + 1))
+    c000 = 0.25 * (fy(  im1,      j,  km1) + fy(  im1,      j,      k) +&
+                 & fy(      i,      j,  km1) + fy(      i,      j,      k))
+    c100 = 0.25 * (fy(      i,      j,  km1) + fy(      i,      j,      k) +&
+                 & fy(  ip1,      j,  km1) + fy(  ip1,      j,      k))
+    c001 = 0.25 * (fy(  im1,      j,      k) + fy(  im1,      j,  kp1) +&
+                 & fy(      i,      j,      k) + fy(      i,      j,  kp1))
+    c101 = 0.25 * (fy(      i,      j,      k) + fy(      i,      j,  kp1) +&
+                 & fy(  ip1,      j,      k) + fy(  ip1,      j,  kp1))
+    c010 = 0.25 * (fy(  im1,  jp1,  km1) + fy(  im1,  jp1,      k) +&
+                 & fy(      i,  jp1,  km1) + fy(      i,  jp1,      k))
+    c110 = 0.25 * (fy(      i,  jp1,  km1) + fy(      i,  jp1,      k) +&
+                 & fy(  ip1,  jp1,  km1) + fy(  ip1,  jp1,      k))
+    c011 = 0.25 * (fy(  im1,  jp1,      k) + fy(  im1,  jp1,  kp1) +&
+                 & fy(      i,  jp1,      k) + fy(      i,  jp1,  kp1))
+    c111 = 0.25 * (fy(      i,  jp1,      k) + fy(      i,  jp1,  kp1) +&
+                 & fy(  ip1,  jp1,      k) + fy(  ip1,  jp1,  kp1))
     c00 = c000 * (1 - dx) + c100 * dx
     c01 = c001 * (1 - dx) + c101 * dx
     c10 = c010 * (1 - dx) + c110 * dx
@@ -231,22 +247,22 @@ contains
     intfy = c0 * (1 - dz) + c1 * dz
 
     ! f_z
-    c000 = 0.25 * (fz(  i - 1,  j - 1,      k) + fz(  i - 1,      j,      k) +&
-                 & fz(      i,  j - 1,      k) + fz(      i,      j,      k))
-    c100 = 0.25 * (fz(      i,  j - 1,      k) + fz(      i,      j,      k) +&
-                 & fz(  i + 1,  j - 1,      k) + fz(  i + 1,      j,      k))
-    c001 = 0.25 * (fz(  i - 1,  j - 1,  k + 1) + fz(  i - 1,      j,  k + 1) +&
-                 & fz(      i,  j - 1,  k + 1) + fz(      i,      j,  k + 1))
-    c101 = 0.25 * (fz(      i,  j - 1,  k + 1) + fz(      i,      j,  k + 1) +&
-                 & fz(  i + 1,  j - 1,  k + 1) + fz(  i + 1,      j,  k + 1))
-    c010 = 0.25 * (fz(  i - 1,      j,      k) + fz(  i - 1,  j + 1,      k) +&
-                 & fz(      i,      j,      k) + fz(      i,  j + 1,      k))
-    c110 = 0.25 * (fz(      i,      j,      k) + fz(      i,  j + 1,      k) +&
-                 & fz(  i + 1,      j,      k) + fz(  i + 1,  j + 1,      k))
-    c011 = 0.25 * (fz(  i - 1,      j,  k + 1) + fz(  i - 1,  j + 1,  k + 1) +&
-                 & fz(      i,      j,  k + 1) + fz(      i,  j + 1,  k + 1))
-    c111 = 0.25 * (fz(      i,      j,  k + 1) + fz(      i,  j + 1,  k + 1) +&
-                 & fz(  i + 1,      j,  k + 1) + fz(  i + 1,  j + 1,  k + 1))
+    c000 = 0.25 * (fz(  im1,  jm1,      k) + fz(  im1,      j,      k) +&
+                 & fz(      i,  jm1,      k) + fz(      i,      j,      k))
+    c100 = 0.25 * (fz(      i,  jm1,      k) + fz(      i,      j,      k) +&
+                 & fz(  ip1,  jm1,      k) + fz(  ip1,      j,      k))
+    c001 = 0.25 * (fz(  im1,  jm1,  kp1) + fz(  im1,      j,  kp1) +&
+                 & fz(      i,  jm1,  kp1) + fz(      i,      j,  kp1))
+    c101 = 0.25 * (fz(      i,  jm1,  kp1) + fz(      i,      j,  kp1) +&
+                 & fz(  ip1,  jm1,  kp1) + fz(  ip1,      j,  kp1))
+    c010 = 0.25 * (fz(  im1,      j,      k) + fz(  im1,  jp1,      k) +&
+                 & fz(      i,      j,      k) + fz(      i,  jp1,      k))
+    c110 = 0.25 * (fz(      i,      j,      k) + fz(      i,  jp1,      k) +&
+                 & fz(  ip1,      j,      k) + fz(  ip1,  jp1,      k))
+    c011 = 0.25 * (fz(  im1,      j,  kp1) + fz(  im1,  jp1,  kp1) +&
+                 & fz(      i,      j,  kp1) + fz(      i,  jp1,  kp1))
+    c111 = 0.25 * (fz(      i,      j,  kp1) + fz(      i,  jp1,  kp1) +&
+                 & fz(  ip1,      j,  kp1) + fz(  ip1,  jp1,  kp1))
     c00 = c000 * (1 - dx) + c100 * dx
     c01 = c001 * (1 - dx) + c101 * dx
     c10 = c010 * (1 - dx) + c110 * dx
@@ -258,17 +274,26 @@ contains
 
   subroutine computeForceFreeCurrent(jx0, jy0, jz0, i, j, k)
     implicit none
-    real, intent(out)   :: jx0, jy0, jz0
-    integer, intent(in) :: i, j, k
+    real, intent(out)             :: jx0, jy0, jz0
+    integer(kind=2), intent(in)   :: i, j, k
+    integer(kind=2)               :: im1, jm1, km1, ip1, jp1, kp1
     real                :: divE, ex0, ey0, ez0, bx0, by0, bz0, bb2
     real                :: dx1, dx2, dy1, dy2, dz1, dz2, curls
     real                :: curlBx, curlBy, curlBz
     real                :: curlEx, curlEy, curlEz
     real                :: EcrossBx, EcrossBy, EcrossBz
+
+    im1 = MAX(i - 1, -NGHOST)
+    jm1 = MAX(j - 1, -NGHOST)
+    km1 = MAX(k - 1, -NGHOST)
+    ip1 = MIN(i + 1, this_meshblock%ptr%sx - 1 + NGHOST)
+    jp1 = MIN(j + 1, this_meshblock%ptr%sy - 1 + NGHOST)
+    kp1 = MIN(k + 1, this_meshblock%ptr%sz - 1 + NGHOST)
+
     ! `div E` on nodes
-    divE = (ex(i, j, k) - ex(i - 1, j, k)) +&
-         & (ey(i, j, k) - ey(i, j - 1, k)) +&
-         & (ez(i, j, k) - ez(i, j, k - 1))
+    divE = (ex(i, j, k) - ex(im1, j, k)) +&
+         & (ey(i, j, k) - ey(i, jm1, k)) +&
+         & (ez(i, j, k) - ez(i, j, km1))
 
     ! `E` and `B` on nodes
     call interpFromEdges(0.0, 0.0, 0.0, i, j, k, ex, ey, ez, ex0, ey0, ez0)
@@ -276,23 +301,23 @@ contains
     bb2 = bx0**2 + by0**2 + bz0**2
 
     ! `curl B` on nodes
-    dx1 = (bz(    i,    j,    k) - bz(    i,j - 1,    k)) - (by(    i,    j,    k) - by(    i,    j,k - 1))
-    dx2 = (bz(i - 1,    j,    k) - bz(i - 1,j - 1,    k)) - (by(i - 1,    j,    k) - by(i - 1,    j,k - 1))
+    dx1 = (bz(i,j,k) - bz(i,jm1,k)) - (by(i,j,k) - by(i,j,km1))
+    dx2 = (bz(im1,j,k) - bz(im1,jm1,k)) - (by(im1,j,k) - by(im1,j,km1))
     curlBx = 0.5 * (dx1 + dx2)
-    dy1 = (bx(    i,    j,    k) - bx(    i,    j,k - 1)) - (bz(    i,    j,    k) - bz(i - 1,    j,    k))
-    dy2 = (bx(    i,j - 1,    k) - bx(    i,j - 1,k - 1)) - (bz(    i,j - 1,    k) - bz(i - 1,j - 1,    k))
+    dy1 = (bx(i,j,k) - bx(i,j,km1)) - (bz(i,j,k) - bz(im1,j,k))
+    dy2 = (bx(i,jm1,k) - bx(i,jm1,km1)) - (bz(i,jm1,k) - bz(im1,jm1,k))
     curlBy = 0.5 * (dy1 + dy2)
-    dz1 = (by(    i,    j,    k) - by(i - 1,    j,    k)) - (bx(    i,    j,    k) - bx(    i,j - 1,    k))
-    dz2 = (by(    i,    j,k - 1) - by(i - 1,    j,k - 1)) - (bx(    i,    j,k - 1) - bx(    i,j - 1,k - 1))
+    dz1 = (by(i,j,k) - by(im1,j,k)) - (bx(i,j,k) - bx(i,jm1,k))
+    dz2 = (by(i,j,km1) - by(im1,j,km1)) - (bx(i,j,km1) - bx(i,jm1,km1))
     curlBz = 0.5 * (dz1 + dz2)
 
     ! `curl E` on nodes
-    curlEx = 0.5 * (0.5 * (ez(i, j + 1, k) - ez(i, j - 1, k)) + 0.5 * (ez(i, j + 1, k - 1) - ez(i, j - 1, k - 1))) -&
-           & 0.5 * (0.5 * (ey(i, j, k + 1) - ey(i, j, k - 1)) + 0.5 * (ey(i, j - 1, k + 1) - ey(i, j - 1, k - 1)))
-    curlEy = 0.5 * (0.5 * (ex(i, j, k + 1) - ex(i, j, k - 1)) + 0.5 * (ex(i - 1, j, k + 1) - ex(i - 1, j, k - 1))) -&
-           & 0.5 * (0.5 * (ez(i + 1, j, k) - ez(i - 1, j, k)) + 0.5 * (ez(i + 1, j, k - 1) - ez(i - 1, j, k - 1)))
-    curlEz = 0.5 * (0.5 * (ey(i + 1, j, k) - ey(i - 1, j, k)) + 0.5 * (ey(i + 1, j - 1, k) - ey(i - 1, j - 1, k))) -&
-           & 0.5 * (0.5 * (ex(i, j + 1, k) - ex(i, j - 1, k)) + 0.5 * (ex(i - 1, j + 1, k) - ex(i - 1, j - 1, k)))
+    curlEx = 0.5 * (0.5 * (ez(i, jp1, k) - ez(i, jm1, k)) + 0.5 * (ez(i, jp1, km1) - ez(i, jm1, km1))) -&
+           & 0.5 * (0.5 * (ey(i, j, kp1) - ey(i, j, km1)) + 0.5 * (ey(i, jm1, kp1) - ey(i, jm1, km1)))
+    curlEy = 0.5 * (0.5 * (ex(i, j, kp1) - ex(i, j, km1)) + 0.5 * (ex(im1, j, kp1) - ex(im1, j, km1))) -&
+           & 0.5 * (0.5 * (ez(ip1, j, k) - ez(im1, j, k)) + 0.5 * (ez(ip1, j, km1) - ez(im1, j, km1)))
+    curlEz = 0.5 * (0.5 * (ey(ip1, j, k) - ey(im1, j, k)) + 0.5 * (ey(ip1, jm1, k) - ey(im1, jm1, k))) -&
+           & 0.5 * (0.5 * (ex(i, jp1, k) - ex(i, jm1, k)) + 0.5 * (ex(im1, jp1, k) - ex(im1, jm1, k)))
 
     curls = ((bx0 * curlBx + by0 * curlBy + bz0 * curlBz) - (ex0 * curlEx + ey0 * curlEy + ez0 * curlEz))
     EcrossBx = (ey0 * bz0 - ez0 * by0)
