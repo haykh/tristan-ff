@@ -54,4 +54,21 @@ contains
     integer, optional, intent(in) :: step
   end subroutine userFieldBoundaryConditions
   !............................................................!
+
+  !--- custom output ------------------------------------------!
+  subroutine userOutput(var, temp_, i, j, k)
+    implicit none
+    integer, intent(in)         :: var
+    integer(kind=2), intent(in) :: i, j, k
+    real, intent(out)           :: temp_
+    if (var .eq. 1) then
+      temp_ = 1.0
+    else if (var .eq. 2) then
+      temp_ = 0.0
+    else
+      temp_ = 0.0
+    end if
+  end subroutine userOutput
+  !............................................................!
+
 end module m_userfile

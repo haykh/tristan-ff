@@ -167,8 +167,9 @@ contains
   !--- custom output ------------------------------------------!
   subroutine userOutput(var, temp_, i, j, k)
     implicit none
-    integer, intent(in) :: var, i, j, k
-    real, intent(out)   :: temp_
+    integer, intent(in)         :: var
+    integer(kind=2), intent(in) :: i, j, k
+    real, intent(out)           :: temp_
     if (var .eq. 1) then
       temp_ = rho(i, j, k)
     else if (var .eq. 2) then
