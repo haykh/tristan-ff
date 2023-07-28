@@ -19,7 +19,7 @@ module m_globalnamespace
   integer, parameter     :: UNIT_input = 10, UNIT_output = 20, UNIT_history = 30
 
   ! simulation parameters
-  real                   :: CC
+  real                   :: CC, CCINV
   integer                :: final_timestep, output_index = 0
   character(len=STR_MAX) :: input_file_name = 'input',&
                           & output_dir_name = 'output',&

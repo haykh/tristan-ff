@@ -1,0 +1,39 @@
+#
+#  Tristan-mp input file
+#
+
+<node_configuration>
+
+  sizex         = 8              # number of cpus in x direction
+  sizey         = 8              # number of cpus in y direction
+  sizez         = 6              # number of cpus in z direction
+
+<time>
+
+  last           = 1000          # last timestep
+
+<grid>
+
+  mx0           = 576             # number of actual grid points in the x direction
+  my0           = 576             # number of actual grid points in the y direction
+  mz0           = 576             # ... (ignored for 2D simulations)
+
+  boundary_x    = 0              # boundary in x: 1 = periodic, 0 = outflow
+  boundary_y    = 0              # boundary in y: 1 = periodic, 0 = outflow
+  boundary_z    = 0              # boundary in z: 1 = periodic, 0 = outflow
+
+<output>
+
+  start         = 0              # first output step
+  interval      = 100             # interval between output steps
+  istep         = 2              # field downsampling
+
+<algorithm>
+
+  c             = 0.5           # speed of light (dx/dt)
+
+<problem>
+  
+  psr_radius  = 30.0
+  psr_angle   = 30.0
+  psr_period  = 1600.0
