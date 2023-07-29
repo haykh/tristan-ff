@@ -1,9 +1,8 @@
 #include "../defs.F90"
 
 module m_initialize
-  #ifdef IFPORT
-      use ifport, only : makedirqq
-    #endif
+  use ifport, only: makedirqq
+  use mpi
   use m_globalnamespace
   use m_aux
   use m_readinput
@@ -30,31 +29,31 @@ contains
 
     ! initializing the simulation parameters class ...
     ! ... which stores all the input values for the simulation
-    sim_params%count = 0
-    allocate(sim_params%param_type(1000))
-    allocate(sim_params%param_group(1000))
-    allocate(sim_params%param_name(1000))
-    allocate(sim_params%param_value(1000))
+    sim_params % count = 0
+    allocate (sim_params % param_type(1000))
+    allocate (sim_params % param_group(1000))
+    allocate (sim_params % param_name(1000))
+    allocate (sim_params % param_value(1000))
 
     call initializeDomain()
 
     call initializeCommunications()
-      call printDiag((mpi_rank .eq. 0), "initializeCommunications()", .true.)
+    call printDiag((mpi_rank .eq. 0), "initializeCommunications()", .true.)
 
     call distributeMeshblocks()
-      call printDiag((mpi_rank .eq. 0), "distributeMeshblocks()", .true.)
+    call printDiag((mpi_rank .eq. 0), "distributeMeshblocks()", .true.)
 
     call initializeSimulation()
-      call printDiag((mpi_rank .eq. 0), "initializeSimulation()", .true.)
+    call printDiag((mpi_rank .eq. 0), "initializeSimulation()", .true.)
 
     call initializeOutput()
-      call printDiag((mpi_rank .eq. 0), "initializeOutput()", .true.)
+    call printDiag((mpi_rank .eq. 0), "initializeOutput()", .true.)
 
     call initializeFields()
-      call printDiag((mpi_rank .eq. 0), "initializeFields()", .true.)
+    call printDiag((mpi_rank .eq. 0), "initializeFields()", .true.)
 
     call initializeRandomSeed(mpi_rank)
-      call printDiag((mpi_rank .eq. 0), "initializeRandomSeed()", .true.)
+    call printDiag((mpi_rank .eq. 0), "initializeRandomSeed()", .true.)
 
     if (mpi_rank .eq. 0) then
       call firstRankInitialize()
@@ -62,10 +61,10 @@ contains
     end if
 
     call userInitialize()
-      call printDiag((mpi_rank .eq. 0), "userInitialize()", .true.)
+    call printDiag((mpi_rank .eq. 0), "userInitialize()", .true.)
 
     call checkEverything()
-      call printDiag((mpi_rank .eq. 0), "checkEverything()", .true.)
+    call printDiag((mpi_rank .eq. 0), "checkEverything()", .true.)
 
     call printParams()
 
@@ -74,39 +73,38 @@ contains
 
   subroutine printParams()
     implicit none
-    integer                 :: n
-    character(len=STR_MAX)  :: FMT
+    integer :: n
+    character(len=STR_MAX) :: FMT
     ! printing simulation parameters in the report
 
     if (mpi_rank .eq. 0) then
       FMT = '== Simulation parameters ==============================================='
-      write(*, '(A)') trim(FMT)
-      do n = 1, sim_params%count
-        if (sim_params%param_type(n) .eq. 1) then
+      write (*, '(A)') trim(FMT)
+      do n = 1, sim_params % count
+        if (sim_params % param_type(n) .eq. 1) then
           FMT = '(A30,A1,A20,A1,I10)'
-          write (*, FMT) trim(sim_params%param_group(n)%str), ':',&
-                       & trim(sim_params%param_name(n)%str), ':',&
-                       & sim_params%param_value(n)%value_int
-        else if (sim_params%param_type(n) .eq. 2) then
-          FMT = getFMTForReal(sim_params%param_value(n)%value_real)
-          FMT = '(A30,A1,A20,A1,' // trim(FMT) // ')'
-          write (*, FMT) trim(sim_params%param_group(n)%str), ':',&
-                       & trim(sim_params%param_name(n)%str), ':',&
-                       & sim_params%param_value(n)%value_real
-        else if (sim_params%param_type(n) .eq. 3) then
+          write (*, FMT) trim(sim_params % param_group(n) % str), ':',&
+                       & trim(sim_params % param_name(n) % str), ':',&
+                       & sim_params % param_value(n) % value_int
+        else if (sim_params % param_type(n) .eq. 2) then
+          FMT = getFMTForReal(sim_params % param_value(n) % value_real)
+          FMT = '(A30,A1,A20,A1,'//trim(FMT)//')'
+          write (*, FMT) trim(sim_params % param_group(n) % str), ':',&
+                       & trim(sim_params % param_name(n) % str), ':',&
+                       & sim_params % param_value(n) % value_real
+        else if (sim_params % param_type(n) .eq. 3) then
           FMT = '(A30,A1,A20,A1,L10)'
-          write (*, FMT) trim(sim_params%param_group(n)%str), ':',&
-                       & trim(sim_params%param_name(n)%str), ':',&
-                       & sim_params%param_value(n)%value_bool
+          write (*, FMT) trim(sim_params % param_group(n) % str), ':',&
+                       & trim(sim_params % param_name(n) % str), ':',&
+                       & sim_params % param_value(n) % value_bool
         else
           call throwError('ERROR. Unknown `param_type` in `saveAllParameters`.')
         end if
       end do
       FMT = '........................................................................'
-      write(*, '(A)') trim(FMT)
+      write (*, '(A)') trim(FMT)
     end if
   end subroutine printParams
-
 
   subroutine initializeCommunications()
     implicit none
@@ -125,16 +123,16 @@ contains
     call getInput('node_configuration', 'sizex', sizex)
     call getInput('node_configuration', 'sizey', sizey)
     call getInput('node_configuration', 'sizez', sizez)
-    global_mesh%x0 = 0
-    global_mesh%y0 = 0
-    global_mesh%z0 = 0
-    call getInput('grid', 'mx0', global_mesh%sx)
-    call getInput('grid', 'my0', global_mesh%sy)
-    call getInput('grid', 'mz0', global_mesh%sz)
+    global_mesh % x0 = 0
+    global_mesh % y0 = 0
+    global_mesh % z0 = 0
+    call getInput('grid', 'mx0', global_mesh % sx)
+    call getInput('grid', 'my0', global_mesh % sy)
+    call getInput('grid', 'mz0', global_mesh % sz)
 
-    if ((modulo(global_mesh%sx, sizex) .ne. 0) .or.&
-      & (modulo(global_mesh%sy, sizey) .ne. 0) .or.&
-      & (modulo(global_mesh%sz, sizez) .ne. 0)) then
+    if ((modulo(global_mesh % sx, sizex) .ne. 0) .or.&
+      & (modulo(global_mesh % sy, sizey) .ne. 0) .or.&
+      & (modulo(global_mesh % sz, sizez) .ne. 0)) then
       call throwError('ERROR: grid size is not evenly divisible by the number of cores')
     end if
 
@@ -146,22 +144,22 @@ contains
   subroutine distributeMeshblocks()
     implicit none
     integer, dimension(3) :: ind, m
-    integer               :: rnk
-    m(1) = global_mesh%sx / sizex
-    m(2) = global_mesh%sy / sizey
-    m(3) = global_mesh%sz / sizez
-    allocate(meshblocks(mpi_size))
-    this_meshblock%ptr => meshblocks(mpi_rank + 1)
+    integer :: rnk
+    m(1) = global_mesh % sx / sizex
+    m(2) = global_mesh % sy / sizey
+    m(3) = global_mesh % sz / sizez
+    allocate (meshblocks(mpi_size))
+    this_meshblock % ptr => meshblocks(mpi_rank + 1)
     do rnk = 0, mpi_size - 1
       ind = rnkToInd(rnk)
-      meshblocks(rnk + 1)%rnk = rnk
+      meshblocks(rnk + 1) % rnk = rnk
       ! find sizes and corner coords
-      meshblocks(rnk + 1)%sx = m(1)
-      meshblocks(rnk + 1)%sy = m(2)
-      meshblocks(rnk + 1)%sz = m(3)
-      meshblocks(rnk + 1)%x0 = ind(1) * m(1) + global_mesh%x0
-      meshblocks(rnk + 1)%y0 = ind(2) * m(2) + global_mesh%y0
-      meshblocks(rnk + 1)%z0 = ind(3) * m(3) + global_mesh%z0
+      meshblocks(rnk + 1) % sx = m(1)
+      meshblocks(rnk + 1) % sy = m(2)
+      meshblocks(rnk + 1) % sz = m(3)
+      meshblocks(rnk + 1) % x0 = ind(1) * m(1) + global_mesh % x0
+      meshblocks(rnk + 1) % y0 = ind(2) * m(2) + global_mesh % y0
+      meshblocks(rnk + 1) % z0 = ind(3) * m(3) + global_mesh % z0
     end do
     ! assign all neighbors
     call reassignNeighborsForAll()
@@ -173,19 +171,19 @@ contains
     call getInput('output', 'interval', output_interval, 10)
     call getInput('output', 'istep', output_istep, 4)
 
-    #ifdef HDF5
+!#ifdef HDF5
 
-    #ifdef MPI08
-      h5comm = MPI_COMM_WORLD%MPI_VAL
-      h5info = MPI_INFO_NULL%MPI_VAL
-    #endif
+!#ifdef MPI08
+    !h5comm = MPI_COMM_WORLD % MPI_VAL
+    !h5info = MPI_INFO_NULL % MPI_VAL
+!#endif
 
-    #ifdef MPI
-      h5comm = MPI_COMM_WORLD
-      h5info = MPI_INFO_NULL
-    #endif
+!#ifdef MPI
+    h5comm = MPI_COMM_WORLD
+    h5info = MPI_INFO_NULL
+!#endif
 
-    #endif
+!#endif
   end subroutine initializeOutput
 
   subroutine initializeSimulation()
@@ -197,11 +195,11 @@ contains
 
   subroutine allocateFieldArray(fld)
     implicit none
-    real, allocatable, intent(inout) :: fld(:,:,:)
-    if (allocated(fld)) deallocate(fld)
-    allocate(fld(-NGHOST : this_meshblock%ptr%sx - 1 + NGHOST,&
-               & -NGHOST : this_meshblock%ptr%sy - 1 + NGHOST,&
-               & -NGHOST : this_meshblock%ptr%sz - 1 + NGHOST))
+    real, allocatable, intent(inout) :: fld(:, :, :)
+    if (allocated(fld)) deallocate (fld)
+    allocate (fld(-NGHOST:this_meshblock % ptr % sx - 1 + NGHOST,&
+               & -NGHOST:this_meshblock % ptr % sy - 1 + NGHOST,&
+               & -NGHOST:this_meshblock % ptr % sz - 1 + NGHOST))
   end subroutine allocateFieldArray
 
   subroutine initializeFields()
@@ -235,37 +233,37 @@ contains
 
     ! exchange fields
     ! 20 = max # of fields sent in each direction
-    sendrecv_offsetsz = MAX0(this_meshblock%ptr%sx, this_meshblock%ptr%sy, this_meshblock%ptr%sz)**2 * NGHOST * 20
+    sendrecv_offsetsz = MAX0(this_meshblock % ptr % sx, this_meshblock % ptr % sy, this_meshblock % ptr % sz)**2 * NGHOST * 20
     sendrecv_buffsz = sendrecv_offsetsz * 30
     ! 26 (~30) directions to send/recv in 3D
 
-    if (allocated(send_fld)) deallocate(send_fld)
-    allocate(send_fld(sendrecv_buffsz))
-    if (allocated(recv_fld)) deallocate(recv_fld)
-    allocate(recv_fld(sendrecv_offsetsz))
+    if (allocated(send_fld)) deallocate (send_fld)
+    allocate (send_fld(sendrecv_buffsz))
+    if (allocated(recv_fld)) deallocate (recv_fld)
+    allocate (recv_fld(sendrecv_offsetsz))
   end subroutine initializeFields
 
   subroutine firstRankInitialize()
     ! create output/restart directories
     !   if does not already exist
     !     note: some compilers may not support IFPORT
-    #ifdef IFPORT
-      logical :: result
-      result = makedirqq(trim(output_dir_name))
-      ! result = makedirqq(trim(restart_dir_name))
-    #else
-      call system('mkdir -p ' // trim(output_dir_name))
-      ! call system('mkdir -p ' // trim(restart_dir_name))
-    #endif
+#ifdef IFPORT
+    logical :: result
+    result = makedirqq(trim(output_dir_name))
+    ! result = makedirqq(trim(restart_dir_name))
+#else
+    call system('mkdir -p '//trim(output_dir_name))
+    ! call system('mkdir -p ' // trim(restart_dir_name))
+#endif
   end subroutine firstRankInitialize
 
   subroutine checkEverything()
     implicit none
     ! check that the domain size is larger than the number of ghost zones
-    if ((this_meshblock%ptr%sx .lt. NGHOST) .or.&
-      & (this_meshblock%ptr%sy .lt. NGHOST) .or.&
-      & (this_meshblock%ptr%sz .lt. NGHOST)) then
-      call throwError('ERROR: ghost zones overflow the domain size in ' // trim(STR(mpi_rank)))
+    if ((this_meshblock % ptr % sx .lt. NGHOST) .or.&
+      & (this_meshblock % ptr % sy .lt. NGHOST) .or.&
+      & (this_meshblock % ptr % sz .lt. NGHOST)) then
+      call throwError('ERROR: ghost zones overflow the domain size in '//trim(STR(mpi_rank)))
     end if
   end subroutine checkEverything
 end module m_initialize

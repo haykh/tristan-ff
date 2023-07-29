@@ -15,13 +15,21 @@ contains
   subroutine initRKstep()
     implicit none
     ! copy fields
-    enx(:,:,:) = ex(:,:,:); eny(:,:,:) = ey(:,:,:); enz(:,:,:) = ez(:,:,:)
-    bnx(:,:,:) = bx(:,:,:); bny(:,:,:) = by(:,:,:); bnz(:,:,:) = bz(:,:,:)
+    enx(:, :, :) = ex(:, :, :)
+    eny(:, :, :) = ey(:, :, :)
+    enz(:, :, :) = ez(:, :, :)
+    bnx(:, :, :) = bx(:, :, :)
+    bny(:, :, :) = by(:, :, :)
+    bnz(:, :, :) = bz(:, :, :)
     ! init dE, dB
-    dex(:,:,:) = QNAN; dey(:,:,:) = QNAN; dez(:,:,:) = QNAN
-    dbx(:,:,:) = QNAN; dby(:,:,:) = QNAN; dbz(:,:,:) = QNAN
+    dex(:, :, :) = QNAN
+    dey(:, :, :) = QNAN
+    dez(:, :, :) = QNAN
+    dbx(:, :, :) = QNAN
+    dby(:, :, :) = QNAN
+    dbz(:, :, :) = QNAN
     ! init rho
-    rho(:,:,:) = QNAN
+    rho(:, :, :) = QNAN
   end subroutine initRKstep
 
   subroutine rk3Step(rk_c1, rk_c2, rk_c3)
@@ -38,9 +46,9 @@ contains
     integer :: i1, i2, j1, j2, k1, k2
     integer :: i, j, k
 
-    i1 = 0; i2 = this_meshblock%ptr%sx - 1
-    j1 = 0; j2 = this_meshblock%ptr%sy - 1
-    k1 = 0; k2 = this_meshblock%ptr%sz - 1
+    i1 = 0; i2 = this_meshblock % ptr % sx - 1
+    j1 = 0; j2 = this_meshblock % ptr % sy - 1
+    k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
     do i = i1 - 1, i2 + 2
       do j = j1 - 1, j2 + 2
@@ -57,28 +65,26 @@ contains
     implicit none
     integer :: i1, i2, j1, j2, k1, k2
     integer :: i, j, k
-    real    :: jx, jy, jz
-    real    :: corr
-    real    :: intex, intey, intez, intbx, intby, intbz, bmag, emag, intrho
+    real :: jx, jy, jz
+    real :: corr
+    real :: intex, intey, intez, intbx, intby, intbz, bmag, emag, intrho
 
-    i1 = 0; i2 = this_meshblock%ptr%sx - 1
-    j1 = 0; j2 = this_meshblock%ptr%sy - 1
-    k1 = 0; k2 = this_meshblock%ptr%sz - 1
+    i1 = 0; i2 = this_meshblock % ptr % sx - 1
+    j1 = 0; j2 = this_meshblock % ptr % sy - 1
+    k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
     do i = i1, i2
       do j = j1, j2
         do k = k1, k2
-          dbx(i, j, k) = CC * ((ey(i, j, k + 1) - ey(i, j, k)) - (ez(i, j + 1, k) - ez(i, j, k)));
-          dby(i, j, k) = CC * ((ez(i + 1, j, k) - ez(i, j, k)) - (ex(i, j, k + 1) - ex(i, j, k)));
-          dbz(i, j, k) = CC * ((ex(i, j + 1, k) - ex(i, j, k)) - (ey(i + 1, j, k) - ey(i, j, k)));
-
+          dbx(i, j, k) = CC * ((ey(i, j, k + 1) - ey(i, j, k)) - (ez(i, j + 1, k) - ez(i, j, k))); 
+          dby(i, j, k) = CC * ((ez(i + 1, j, k) - ez(i, j, k)) - (ex(i, j, k + 1) - ex(i, j, k))); 
+          dbz(i, j, k) = CC * ((ex(i, j + 1, k) - ex(i, j, k)) - (ey(i + 1, j, k) - ey(i, j, k))); 
           dex(i, j, k) = -CC * (((by(i, j, k) - by(i, j, k - 1)) - (bz(i, j, k) - bz(i, j - 1, k))) -&
-                              & ((b0y(i, j, k) - b0y(i, j, k - 1)) - (b0z(i, j, k) - b0z(i, j - 1, k))));
+                              & ((b0y(i, j, k) - b0y(i, j, k - 1)) - (b0z(i, j, k) - b0z(i, j - 1, k)))); 
           dey(i, j, k) = -CC * (((bz(i, j, k) - bz(i - 1, j, k)) - (bx(i, j, k) - bx(i, j, k - 1))) -&
-                              & ((b0z(i, j, k) - b0z(i - 1, j, k)) - (b0x(i, j, k) - b0x(i, j, k - 1))));
+                              & ((b0z(i, j, k) - b0z(i - 1, j, k)) - (b0x(i, j, k) - b0x(i, j, k - 1)))); 
           dez(i, j, k) = -CC * (((bx(i, j, k) - bx(i, j - 1, k)) - (by(i, j, k) - by(i - 1, j, k))) -&
-                              & ((b0x(i, j, k) - b0x(i, j - 1, k)) - (b0y(i, j, k) - b0y(i - 1, j, k))));
-
+                              & ((b0x(i, j, k) - b0x(i, j - 1, k)) - (b0y(i, j, k) - b0y(i - 1, j, k)))); 
           !--------X current-------------------------------------
           intrho = 0.5 * (rho(i + 1, j, k) + rho(i, j, k))
 
@@ -98,7 +104,7 @@ contains
             corr = sqrt(bmag / emag)
             intey = intey * corr
             intez = intez * corr
-          endif
+          end if
 
           jx = CC / (bmag + TINY) * (intrho * (intey * intbz - intby * intez))
 
@@ -121,7 +127,7 @@ contains
             corr = sqrt(bmag / emag)
             intex = intex * corr
             intez = intez * corr
-          endif
+          end if
 
           jy = CC / (bmag + TINY) * (intrho * (intez * intbx - intex * intbz))
 
@@ -135,7 +141,7 @@ contains
           intbx = 0.5 * (bx(i, j, k) + bx(i, j - 1, k))
           intby = 0.5 * (by(i, j, k) + by(i - 1, j, k))
           intbz = 0.125 * (bz(i, j, k) + bz(i - 1, j, k) + bz(i - 1, j - 1, k) + bz(i, j - 1, k) +&
-                         & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1) )
+                         & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1))
           !---------------------------------------------------
 
           bmag = intbx**2 + intby**2 + intbz**2
@@ -144,7 +150,7 @@ contains
             corr = sqrt(bmag / emag)
             intex = intex * corr
             intey = intey * corr
-          endif
+          end if
 
           jz = CC / (bmag + TINY) * (intrho * (intex * intby - intbx * intey))
           !---------------------------------------------------
@@ -163,9 +169,9 @@ contains
     integer :: i, j, k
     integer :: i1, i2, j1, j2, k1, k2
 
-    i1 = 0; i2 = this_meshblock%ptr%sx - 1
-    j1 = 0; j2 = this_meshblock%ptr%sy - 1
-    k1 = 0; k2 = this_meshblock%ptr%sz - 1
+    i1 = 0; i2 = this_meshblock % ptr % sx - 1
+    j1 = 0; j2 = this_meshblock % ptr % sy - 1
+    k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
     do i = i1, i2
       do j = j1, j2
@@ -190,13 +196,13 @@ contains
   subroutine cleanEpar()
     implicit none
     integer :: i, j, k
-    real    :: jx, jy, jz
-    real    :: intex, intey, intez, intbx, intby, intbz, bmag, epar
+    real :: jx, jy, jz
+    real :: intex, intey, intez, intbx, intby, intbz, bmag, epar
     integer :: i1, i2, j1, j2, k1, k2
 
-    i1 = 0; i2 = this_meshblock%ptr%sx - 1
-    j1 = 0; j2 = this_meshblock%ptr%sy - 1
-    k1 = 0; k2 = this_meshblock%ptr%sz - 1
+    i1 = 0; i2 = this_meshblock % ptr % sx - 1
+    j1 = 0; j2 = this_meshblock % ptr % sy - 1
+    k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
     do i = i1, i2
       do j = j1, j2
@@ -237,7 +243,7 @@ contains
           intbx = 0.5 * (bx(i, j, k) + bx(i, j - 1, k))
           intby = 0.5 * (by(i, j, k) + by(i - 1, j, k))
           intbz = 0.125 * (bz(i, j, k) + bz(i - 1, j, k) + bz(i - 1, j - 1, k) + bz(i, j - 1, k) +&
-                         & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1) )
+                         & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1))
           !---------------------------------------------------
           bmag = intbx**2 + intby**2 + intbz**2
           epar = (intex * intbx + intey * intby + intez * intbz)
@@ -324,4 +330,4 @@ contains
   !
   ! end subroutine checkEB
 
-  end module m_fldsolver
+end module m_fldsolver

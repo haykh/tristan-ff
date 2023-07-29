@@ -1,4 +1,5 @@
 *.o
+build/
 exec/
 src_/
 obj/
