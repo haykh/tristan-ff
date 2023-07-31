@@ -19,6 +19,12 @@ contains
   !--- initialization -----------------------------------------!
   subroutine userInitialize()
     implicit none
+    call userReadInput()
+    call userInitFields()
+  end subroutine userInitialize
+  
+  subroutine userReadInput()
+    implicit none
     call getInput('problem', 'psr_radius', psr_radius)
     call getInput('problem', 'psr_angle', psr_angle)
     psr_angle = psr_angle * M_PI / 180.0
@@ -28,7 +34,7 @@ contains
     xc_g = 0.5 * global_mesh % sx
     yc_g = 0.5 * global_mesh % sy
     zc_g = 0.5 * global_mesh % sz
-  end subroutine userInitialize
+  end subroutine userReadInput
 
   subroutine userInitFields()
     implicit none

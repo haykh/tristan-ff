@@ -171,19 +171,8 @@ contains
     call getInput('output', 'interval', output_interval, 10)
     call getInput('output', 'istep', output_istep, 4)
 
-!#ifdef HDF5
-
-!#ifdef MPI08
-    !h5comm = MPI_COMM_WORLD % MPI_VAL
-    !h5info = MPI_INFO_NULL % MPI_VAL
-!#endif
-
-!#ifdef MPI
     h5comm = MPI_COMM_WORLD
     h5info = MPI_INFO_NULL
-!#endif
-
-!#endif
   end subroutine initializeOutput
 
   subroutine initializeSimulation()
