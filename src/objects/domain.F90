@@ -29,5 +29,6 @@ module m_domain
   !   - boundary = 1: periodic
   !   - boundary = 0: open
   integer :: boundary_x, boundary_y, boundary_z
+  integer :: absorb_buff
   integer :: sendrecv_neighbors
 end module m_domain

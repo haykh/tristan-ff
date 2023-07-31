@@ -50,6 +50,7 @@ contains
     j1 = 0; j2 = this_meshblock % ptr % sy - 1
     k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
+    !dir$ vector aligned
     do i = i1 - 1, i2 + 2
       do j = j1 - 1, j2 + 2
         do k = k1 - 1, k2 + 2
@@ -73,6 +74,7 @@ contains
     j1 = 0; j2 = this_meshblock % ptr % sy - 1
     k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
+    !dir$ vector aligned
     do i = i1, i2
       do j = j1, j2
         do k = k1, k2
@@ -168,25 +170,104 @@ contains
     real, intent(in) :: rk_c1, rk_c2, rk_c3
     integer :: i, j, k
     integer :: i1, i2, j1, j2, k1, k2
+    real :: ig, jg, kg
+    real :: xc, yc, zc, rabsorb, r, rmax, sigma_r, delta_r
 
     i1 = 0; i2 = this_meshblock % ptr % sx - 1
     j1 = 0; j2 = this_meshblock % ptr % sy - 1
     k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
-    do i = i1, i2
-      do j = j1, j2
-        do k = k1, k2
-          ! update E-field
-          ex(i, j, k) = rk_c1 * enx(i, j, k) + rk_c2 * ex(i, j, k) + rk_c3 * dex(i, j, k)
-          ey(i, j, k) = rk_c1 * eny(i, j, k) + rk_c2 * ey(i, j, k) + rk_c3 * dey(i, j, k)
-          ez(i, j, k) = rk_c1 * enz(i, j, k) + rk_c2 * ez(i, j, k) + rk_c3 * dez(i, j, k)
-          ! update B-field
-          bx(i, j, k) = rk_c1 * bnx(i, j, k) + rk_c2 * bx(i, j, k) + rk_c3 * dbx(i, j, k)
-          by(i, j, k) = rk_c1 * bny(i, j, k) + rk_c2 * by(i, j, k) + rk_c3 * dby(i, j, k)
-          bz(i, j, k) = rk_c1 * bnz(i, j, k) + rk_c2 * bz(i, j, k) + rk_c3 * dbz(i, j, k)
+    if (boundary_x .ne. 2) then
+
+      !dir$ vector aligned
+      do i = i1, i2
+        do j = j1, j2
+          do k = k1, k2
+            ! update E-field
+            ex(i, j, k) = rk_c1 * enx(i, j, k) + rk_c2 * ex(i, j, k) + rk_c3 * dex(i, j, k)
+            ey(i, j, k) = rk_c1 * eny(i, j, k) + rk_c2 * ey(i, j, k) + rk_c3 * dey(i, j, k)
+            ez(i, j, k) = rk_c1 * enz(i, j, k) + rk_c2 * ez(i, j, k) + rk_c3 * dez(i, j, k)
+            ! update B-field
+            bx(i, j, k) = rk_c1 * bnx(i, j, k) + rk_c2 * bx(i, j, k) + rk_c3 * dbx(i, j, k)
+            by(i, j, k) = rk_c1 * bny(i, j, k) + rk_c2 * by(i, j, k) + rk_c3 * dby(i, j, k)
+            bz(i, j, k) = rk_c1 * bnz(i, j, k) + rk_c2 * bz(i, j, k) + rk_c3 * dbz(i, j, k)
+          end do
         end do
       end do
-    end do
+
+    else
+      ! absorbing boundaries
+      xc = 0.5 * REAL(global_mesh % sx)
+      yc = 0.5 * REAL(global_mesh % sy)
+      zc = 0.5 * REAL(global_mesh % sz)
+      rmax = MIN(MIN(xc, yc), zc)
+      rabsorb = rmax - REAL(absorb_buff)
+
+      !dir$ vector aligned
+      do i = i1, i2
+        do j = j1, j2
+          do k = k1, k2
+            ig = REAL(i + this_meshblock % ptr % x0)
+            jg = REAL(i + this_meshblock % ptr % y0)
+            kg = REAL(k + this_meshblock % ptr % z0)
+            ! update E-field
+            ex(i, j, k) = rk_c1 * enx(i, j, k) + rk_c2 * ex(i, j, k) + rk_c3 * dex(i, j, k)
+            ey(i, j, k) = rk_c1 * eny(i, j, k) + rk_c2 * ey(i, j, k) + rk_c3 * dey(i, j, k)
+            ez(i, j, k) = rk_c1 * enz(i, j, k) + rk_c2 * ez(i, j, k) + rk_c3 * dez(i, j, k)
+            ! update B-field
+            bx(i, j, k) = rk_c1 * bnx(i, j, k) + rk_c2 * bx(i, j, k) + rk_c3 * dbx(i, j, k)
+            by(i, j, k) = rk_c1 * bny(i, j, k) + rk_c2 * by(i, j, k) + rk_c3 * dby(i, j, k)
+            bz(i, j, k) = rk_c1 * bnz(i, j, k) + rk_c2 * bz(i, j, k) + rk_c3 * dbz(i, j, k)
+
+            r = sqrt((ig - xc)**2 + (jg - yc)**2 + (kg - zc)**2)
+            if (r .gt. rabsorb - 1.0) then
+              ! damp Ex
+              r = sqrt((ig + 0.5 - xc)**2 + (jg - yc)**2 + (kg - zc)**2)
+              delta_r = (r - rabsorb) / REAL(absorb_buff)
+              if (delta_r .gt. 0.0) then
+                ex(i, j, k) = (1.0 - delta_r**3) * ex(i, j, k)
+              end if
+
+              ! damp Ey
+              r = sqrt((ig - xc)**2 + (jg + 0.5 - yc)**2 + (kg - zc)**2)
+              delta_r = (r - rabsorb) / REAL(absorb_buff)
+              if (delta_r .gt. 0.0) then
+                ey(i, j, k) = (1.0 - delta_r**3) * ey(i, j, k)
+              end if
+
+              ! damp Ez
+              r = sqrt((ig - xc)**2 + (jg - yc)**2 + (kg + 0.5 - zc)**2)
+              delta_r = (r - rabsorb) / REAL(absorb_buff)
+              if (delta_r .gt. 0.0) then
+                ez(i, j, k) = (1.0 - delta_r**3) * ez(i, j, k)
+              end if
+
+              ! damp Bx
+              r = sqrt((ig - xc)**2 + (jg + 0.5 - yc)**2 + (kg + 0.5 - zc)**2)
+              delta_r = (r - rabsorb) / REAL(absorb_buff)
+              if (delta_r .gt. 0.0) then
+                bx(i, j, k) = (1.0 - delta_r**3) * bx(i, j, k)
+              end if
+
+              ! damp By
+              r = sqrt((ig + 0.5 - xc)**2 + (jg - yc)**2 + (kg + 0.5 - zc)**2)
+              delta_r = (r - rabsorb) / REAL(absorb_buff)
+              if (delta_r .gt. 0.0) then
+                by(i, j, k) = (1.0 - delta_r**3) * by(i, j, k)
+              end if
+
+              ! damp Bz
+              r = sqrt((ig + 0.5 - xc)**2 + (jg + 0.5 - yc)**2 + (kg - zc)**2)
+              delta_r = (r - rabsorb) / REAL(absorb_buff)
+              if (delta_r .gt. 0.0) then
+                bz(i, j, k) = (1.0 - delta_r**3) * bz(i, j, k)
+              end if
+            end if
+          end do
+        end do
+      end do
+
+    end if
   end subroutine rk3Update
 
   subroutine cleanEpar()
@@ -200,6 +281,7 @@ contains
     j1 = 0; j2 = this_meshblock % ptr % sy - 1
     k1 = 0; k2 = this_meshblock % ptr % sz - 1
 
+    !dir$ vector aligned
     do i = i1, i2
       do j = j1, j2
         do k = k1, k2
@@ -262,6 +344,7 @@ contains
     j1 = -1; j2 = this_meshblock % ptr % sy + 1
     k1 = -1; k2 = this_meshblock % ptr % sz + 1
 
+    !dir$ vector aligned
     do i = i1, i2
       do j = j1, j2
         do k = k1, k2

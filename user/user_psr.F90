@@ -78,6 +78,7 @@ contains
     real :: supersph_radius_sq
     real, allocatable :: ex_new(:, :, :), ey_new(:, :, :), ez_new(:, :, :), &
                          bx_new(:, :, :), by_new(:, :, :), bz_new(:, :, :)
+    !dir$ attributes align: 32 :: ex_new, ey_new, ez_new, bx_new, by_new, bz_new
     real :: rx, ry, rz, rr_sqr, shift_B, s
     real :: bx_dip, by_dip, bz_dip, b_dip_dot_r, b_int_dot_r
     real :: scaleEpar, scaleEperp, scaleBperp, scaleBpar, scale
@@ -142,11 +143,12 @@ contains
 
       if (updateE_ .or. updateB_) then
         ! saving boundaries into `e/b_new` arrays
+        !dir$ vector aligned
         do i = 0, this_meshblock % ptr % sx - 1
-          i_glob = i + this_meshblock % ptr % x0
           do j = 0, this_meshblock % ptr % sy - 1
-            j_glob = j + this_meshblock % ptr % y0
             do k = 0, this_meshblock % ptr % sz - 1
+              i_glob = i + this_meshblock % ptr % x0
+              j_glob = j + this_meshblock % ptr % y0
               k_glob = k + this_meshblock % ptr % z0
               if ((i_glob - xc_g)**2 + (j_glob - yc_g)**2 + (k_glob - zc_g)**2 .lt. supersph_radius_sq) then
                 ! ... setting B-field
@@ -162,11 +164,11 @@ contains
                   call getBfield(step, 0.0, rx + xc_g, ry + yc_g, rz + zc_g, bx_dip, by_dip, bz_dip)
                   b_dip_dot_r = bx_dip * rx + by_dip * ry + bz_dip * rz
 
-                  scale = scaleBperp
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_B) / scale)
+                  scale = 1.0 / scaleBperp
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_B) * scale)
                   bx_new(i, j, k) = (b_int_dot_r - b_dip_dot_r) * (rx / rr_sqr) * (1.0 - s)
-                  scale = scaleBpar
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_B) / scale)
+                  scale = 1.0 / scaleBpar
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_B) * scale)
                   bx_new(i, j, k) = bx_new(i, j, k) + bx_dip + &
                                     ((bx(i, j, k) - b_int_dot_r * rx / rr_sqr) - &
                                      (bx_dip - b_dip_dot_r * rx / rr_sqr)) * (1.0 - s)
@@ -182,11 +184,11 @@ contains
                   call getBfield(step, 0.0, rx + xc_g, ry + yc_g, rz + zc_g, bx_dip, by_dip, bz_dip)
                   b_dip_dot_r = bx_dip * rx + by_dip * ry + bz_dip * rz
 
-                  scale = scaleBperp
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_B) / scale)
+                  scale = 1.0 / scaleBperp
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_B) * scale)
                   by_new(i, j, k) = (b_int_dot_r - b_dip_dot_r) * (ry / rr_sqr) * (1.0 - s)
-                  scale = scaleBpar
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_B) / scale)
+                  scale = 1.0 / scaleBpar
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_B) * scale)
                   by_new(i, j, k) = by_new(i, j, k) + by_dip + &
                                     ((by(i, j, k) - b_int_dot_r * ry / rr_sqr) - &
                                      (by_dip - b_dip_dot_r * ry / rr_sqr)) * (1.0 - s)
@@ -202,11 +204,11 @@ contains
                   call getBfield(step, 0.0, rx + xc_g, ry + yc_g, rz + zc_g, bx_dip, by_dip, bz_dip)
                   b_dip_dot_r = bx_dip * rx + by_dip * ry + bz_dip * rz
 
-                  scale = scaleBperp
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_B) / scale)
+                  scale = 1.0 / scaleBperp
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_B) * scale)
                   bz_new(i, j, k) = (b_int_dot_r - b_dip_dot_r) * (rz / rr_sqr) * (1.0 - s)
-                  scale = scaleBpar
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_B) / scale)
+                  scale = 1.0 / scaleBpar
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_B) * scale)
                   bz_new(i, j, k) = bz_new(i, j, k) + bz_dip + &
                                     ((bz(i, j, k) - b_int_dot_r * rz / rr_sqr) - &
                                      (bz_dip - b_dip_dot_r * rz / rr_sqr)) * (1.0 - s)
@@ -230,13 +232,13 @@ contains
                   ez_dip = -(vx * by_dip - vy * bx_dip) * CCINV
                   e_dip_dot_r = ex_dip * rx + ey_dip * ry + ez_dip * rz
 
-                  scale = scaleEpar
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_E) / scale)
+                  scale = 1.0 / scaleEpar
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_E) * scale)
                   ex_new(i, j, k) = ex_dip + &
                                     ((ex(i, j, k) - e_int_dot_r * rx / rr_sqr) - &
                                      (ex_dip - e_dip_dot_r * rx / rr_sqr)) * (1.0 - s)
-                  scale = scaleEperp
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_E) / scale)
+                  scale = 1.0 / scaleEperp
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_E) * scale)
                   ex_new(i, j, k) = ex_new(i, j, k) + &
                                     (e_int_dot_r - e_dip_dot_r) * (rx / rr_sqr) * (1.0 - s)
 
@@ -257,13 +259,13 @@ contains
                   ez_dip = -(vx * by_dip - vy * bx_dip) * CCINV
                   e_dip_dot_r = ex_dip * rx + ey_dip * ry + ez_dip * rz
 
-                  scale = scaleEpar
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_E) / scale)
+                  scale = 1.0 / scaleEpar
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_E) * scale)
                   ey_new(i, j, k) = ey_dip + &
                                     ((ey(i, j, k) - e_int_dot_r * ry / rr_sqr) - &
                                      (ey_dip - e_dip_dot_r * ry / rr_sqr)) * (1.0 - s)
-                  scale = scaleEperp
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_E) / scale)
+                  scale = 1.0 / scaleEperp
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_E) * scale)
                   ey_new(i, j, k) = ey_new(i, j, k) + &
                                     (e_int_dot_r - e_dip_dot_r) * (ry / rr_sqr) * (1.0 - s)
 
@@ -284,13 +286,13 @@ contains
                   ez_dip = -(vx * by_dip - vy * bx_dip) * CCINV
                   e_dip_dot_r = ex_dip * rx + ey_dip * ry + ez_dip * rz
 
-                  scale = scaleEpar
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_E) / scale)
+                  scale = 1.0 / scaleEpar
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_E) * scale)
                   ez_new(i, j, k) = ez_dip + &
                                     ((ez(i, j, k) - e_int_dot_r * rz / rr_sqr) - &
                                      (ez_dip - e_dip_dot_r * rz / rr_sqr)) * (1.0 - s)
-                  scale = scaleEperp
-                  s = shape(sqrt(rr_sqr) / scale, (psr_radius - shift_E) / scale)
+                  scale = 1.0 / scaleEperp
+                  s = shape(sqrt(rr_sqr) * scale, (psr_radius - shift_E) * scale)
                   ez_new(i, j, k) = ez_new(i, j, k) + &
                                     (e_int_dot_r - e_dip_dot_r) * (rz / rr_sqr) * (1.0 - s)
                 end if
@@ -299,11 +301,12 @@ contains
           end do
         end do
         ! copying to real array
+        !dir$ vector aligned
         do i = 0, this_meshblock % ptr % sx - 1
-          i_glob = i + this_meshblock % ptr % x0
           do j = 0, this_meshblock % ptr % sy - 1
-            j_glob = j + this_meshblock % ptr % y0
             do k = 0, this_meshblock % ptr % sz - 1
+              i_glob = i + this_meshblock % ptr % x0
+              j_glob = j + this_meshblock % ptr % y0
               k_glob = k + this_meshblock % ptr % z0
               if ((i_glob - xc_g)**2 + (j_glob - yc_g)**2 + (k_glob - zc_g)**2 .lt. supersph_radius_sq) then
                 if (updateE_) then
@@ -332,6 +335,7 @@ contains
   !--- auxiliary functions ------------------------------------!
   subroutine getBfield(step, offset, x_g, y_g, z_g, &
                        obx, oby, obz)
+    !$omp declare simd(getBfield)
     integer, intent(in) :: step
     real, intent(in) :: x_g, y_g, z_g, offset
     real, intent(out) :: obx, oby, obz
@@ -340,6 +344,7 @@ contains
 
   subroutine getDipole(step, offset, x_g, y_g, z_g, &
                        obx, oby, obz)
+    !$omp declare simd(getDipole)
     implicit none
     integer, intent(in) :: step
     real, intent(in) :: x_g, y_g, z_g, offset
@@ -369,6 +374,7 @@ contains
   end subroutine getDipole
 
   real function shape(rad, rad0)
+    !$omp declare simd(shape) uniform(rad,rad0)
     implicit none
     real, intent(in) :: rad, rad0
     real :: del

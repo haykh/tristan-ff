@@ -139,6 +139,13 @@ contains
     call getInput('grid', 'boundary_x', boundary_x, 1)
     call getInput('grid', 'boundary_y', boundary_y, 1)
     call getInput('grid', 'boundary_z', boundary_z, 1)
+    ! if one of the boundaries is set to absorb -- set all of them to absorb
+    if ((boundary_x .eq. 2) .or. (boundary_y .eq. 2) .or. (boundary_z .eq. 2)) then
+      boundary_x = 2
+      boundary_y = 2
+      boundary_z = 2
+      call getInput('grid', 'absorb_buff', absorb_buff, 20)
+    end if
   end subroutine initializeDomain
 
   subroutine distributeMeshblocks()
