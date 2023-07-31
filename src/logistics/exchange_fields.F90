@@ -24,8 +24,8 @@ contains
     !#endif
 
     !#ifdef MPI
-    integer, allocatable            :: mpi_req(:)
-    integer                         :: istat(MPI_STATUS_SIZE)
+    integer, allocatable :: mpi_req(:)
+    integer :: istat(MPI_STATUS_SIZE)
     !#endif
 
     logical, allocatable :: mpi_sendflags(:), mpi_recvflags(:)

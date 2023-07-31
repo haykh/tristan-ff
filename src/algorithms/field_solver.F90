@@ -255,13 +255,13 @@ contains
   subroutine checkEB()
     implicit none
     integer :: i, j, k
-    real    :: intex, intey, intez, intbx, intby, intbz, bmag, emag, corr
+    real :: intex, intey, intez, intbx, intby, intbz, bmag, emag, corr
     integer :: i1, i2, j1, j2, k1, k2
-  
-    i1 = -1; i2 = this_meshblock%ptr%sx + 1
-    j1 = -1; j2 = this_meshblock%ptr%sy + 1
-    k1 = -1; k2 = this_meshblock%ptr%sz + 1
-  
+
+    i1 = -1; i2 = this_meshblock % ptr % sx + 1
+    j1 = -1; j2 = this_meshblock % ptr % sy + 1
+    k1 = -1; k2 = this_meshblock % ptr % sz + 1
+
     do i = i1, i2
       do j = j1, j2
         do k = k1, k2
@@ -269,61 +269,61 @@ contains
           intex = ex(i, j, k)
           intey = 0.25 * (ey(i, j, k) + ey(i + 1, j, k) + ey(i, j - 1, k) + ey(i + 1, j - 1, k))
           intez = 0.25 * (ez(i, j, k) + ez(i + 1, j, k) + ez(i, j, k - 1) + ez(i + 1, j, k - 1))
-  
+
           intbx = 0.125 * (bx(i, j, k) + bx(i, j - 1, k) + bx(i + 1, j - 1, k) + bx(i + 1, j, k) +&
                          & bx(i, j, k - 1) + bx(i, j - 1, k - 1) + bx(i + 1, j - 1, k - 1) + bx(i + 1, j, k - 1))
           intby = 0.5 * (by(i, j, k) + by(i, j, k - 1))
           intbz = 0.5 * (bz(i, j, k) + bz(i, j - 1, k))
-  
+
           bmag = intbx**2 + intby**2 + intbz**2
           emag = intex**2 + intey**2 + intez**2
           if (emag .gt. bmag) then
             corr = sqrt(bmag / emag)
             intey = intey * corr
             intez = intez * corr
-          endif
+          end if
           ex(i, j, k) = ex(i, j, k) * corr
           !---------------------------------------------------
-  
+
           !-------interpolate on Ey---------------------------
           intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j + 1, k) + ex(i - 1, j + 1, k))
           intey = ey(i, j, k)
           intez = 0.25 * (ez(i, j, k) + ez(i, j + 1, k) + ez(i, j, k - 1) + ez(i, j + 1, k - 1))
-  
+
           intbx = 0.5 * (bx(i, j, k) + bx(i, j, k - 1))
           intby = 0.125 * (by(i, j, k) + by(i - 1, j, k) + by(i - 1, j + 1, k) + by(i, j + 1, k) +&
                          & by(i, j, k - 1) + by(i - 1, j, k - 1) + by(i - 1, j + 1, k - 1) + by(i, j + 1, k - 1))
           intbz = 0.5 * (bz(i, j, k) + bz(i - 1, j, k))
-  
+
           bmag = intbx**2 + intby**2 + intbz**2
           emag = intex**2 + intey**2 + intez**2
           if (emag .gt. bmag) then
             corr = sqrt(bmag / emag)
-          endif
+          end if
           ey(i, j, k) = ey(i, j, k) * corr
           !---------------------------------------------------
-  
+
           !-------interpolate on Ez---------------------------
           intex = 0.25 * (ex(i, j, k) + ex(i - 1, j, k) + ex(i, j, k + 1) + ex(i - 1, j, k + 1))
           intey = 0.25 * (ey(i, j, k) + ey(i, j - 1, k) + ey(i, j, k + 1) + ey(i, j - 1, k + 1))
           intez = ez(i, j, k)
-  
+
           intbx = 0.5 * (bx(i, j, k) + bx(i, j - 1, k))
           intby = 0.5 * (by(i, j, k) + by(i - 1, j, k))
           intbz = 0.125 * (bz(i, j, k) + bz(i - 1, j, k) + bz(i - 1, j - 1, k) + bz(i, j - 1, k) +&
                          & bz(i, j, k + 1) + bz(i - 1, j, k + 1) + bz(i - 1, j - 1, k + 1) + bz(i, j - 1, k + 1))
-  
+
           bmag = intbx**2 + intby**2 + intbz**2
           emag = intex**2 + intey**2 + intez**2
           if (emag .gt. bmag) then
             corr = sqrt(bmag / emag)
-          endif
+          end if
           ez(i, j, k) = ez(i, j, k) * corr
           !---------------------------------------------------
         end do
       end do
     end do
-  
+
   end subroutine checkEB
 
 end module m_fldsolver

@@ -22,7 +22,7 @@ contains
     call userReadInput()
     call userInitFields()
   end subroutine userInitialize
-  
+
   subroutine userReadInput()
     implicit none
     call getInput('problem', 'psr_radius', psr_radius)
@@ -381,7 +381,7 @@ contains
   subroutine userOutput(var, temp_, i, j, k)
     implicit none
     integer, intent(in) :: var, i, j, k
-    real, intent(out)   :: temp_
+    real, intent(out) :: temp_
     if (var .eq. 1) then
       temp_ = rho(i, j, k)
     else if (var .eq. 2) then

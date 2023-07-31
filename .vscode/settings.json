@@ -1,7 +1,6 @@
 {
-  "modernFortranFormatter.fprettifyPath": "/home/hakobyan/Codes/tristan-v2/extern/fprettify",
+  "fortran.formatting.formatter": "Disabled",
+  "fortran.fortls.disabled": true,
+  "modernFortranFormatter.fprettifyPath": "/Users/hakobyan/Codes/tristan-ff/.venv/bin/fprettify",
   "modernFortranFormatter.fprettifyArgs": "-i 2 -w 4 --whitespace-assignment true --enable-decl --whitespace-decl true --whitespace-relational true --whitespace-logical true --whitespace-plusminus true --whitespace-multdiv true --whitespace-print true --whitespace-type true --whitespace-intrinsics true --enable-replacements -l 1000",
-  "[fortran-modern]": {
-    "editor.defaultFormatter": "yukiuuh.vscode-modern-fortran-formatter"
-  }
 }
